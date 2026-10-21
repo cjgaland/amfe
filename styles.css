@@ -919,7 +919,7 @@ td.bloq, th.bloq { background: repeating-linear-gradient(45deg, var(--bg-3) 0 4p
 .doc-portada p { margin: 3px 0; color: #444; font-size: 13.5px; }
 .doc-portada .doc-sub { font-size: 18px; color: #9a3f06; margin: 8px 0; }
 .doc-h1 { margin: 18px 0 8px; font-size: 18px; color: #9a3f06; }
-.doc-h2 { margin: 14px 0 6px; font-size: 15px; color: #134e4a; }
+.doc-h2 { margin: 14px 0 6px; font-size: 15px; color: #7c2d12; }
 .doc-p { margin: 6px 0; line-height: 1.5; }
 .doc-nota { font-style: italic; color: #555; font-size: 12.5px; }
 .doc-ul { margin: 6px 0; padding-left: 20px; }
@@ -1222,3 +1222,33 @@ body.ver-informe .tabla-amfe { min-width: 0; font-size: 11.5px; }
 :root body.ver-informe .mz-f { color: #fff; }
 :root body.ver-informe .sub-c0 { --sc: #2563eb; } :root body.ver-informe .sub-c1 { --sc: #7c3aed; } :root body.ver-informe .sub-c2 { --sc: #c026d3; } :root body.ver-informe .sub-c3 { --sc: #0f766e; }
 :root body.ver-informe .sub-c4 { --sc: #475569; } :root body.ver-informe .sub-c5 { --sc: #92400e; } :root body.ver-informe .sub-c6 { --sc: #1e3a8a; } :root body.ver-informe .sub-c7 { --sc: #0284c7; }
+
+/* ---------- Paso 7 · Acciones de mejora ---------- */
+.acc-f { margin: 14px 0; padding: 12px 14px 12px; border-radius: var(--radius-lg); border: 1px solid var(--border); border-left: 5px solid var(--sc); background: var(--bg-2); box-shadow: var(--shadow-sm); }
+.acc-f-cab { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 4px 8px; }
+.acc-f-dl { margin: 8px 0; display: grid; gap: 4px; font-size: 13.5px; }
+.acc-f-dl div { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 8px; }
+.acc-f-dl dt { font-weight: 800; color: var(--text-3); font-size: 12px; text-transform: uppercase; letter-spacing: .3px; padding-top: 1px; }
+.acc-f-dl dd { margin: 0; color: var(--text-2); }
+@media (max-width: 480px) { .acc-f-dl div { grid-template-columns: minmax(0, 1fr); gap: 0; } }
+.acc-card { margin: 10px 0; padding: 10px 12px 4px; border-radius: var(--radius); border: 1px solid var(--border-lite); background: var(--bg); }
+.acc-card .seg button { flex: 1 1 auto; }
+.acc-ind { margin: 8px 0; padding: 8px 10px 2px; border-radius: var(--radius); background: var(--cyan-dim); border: 1px solid var(--cyan-glow); }
+.acc-card > [data-zac] > .warn, .acc-card > [data-zac] > .note { margin: 6px 0; font-size: 13.5px; }
+
+/* ---------- Paso 8 · Reevaluar y cerrar ---------- */
+.punt-ipr--res { flex-wrap: wrap; gap: 4px; font-size: 13px; }
+.red-pct { color: var(--green); font-size: 13.5px; }
+.red-pct--mal { color: var(--red); }
+.ad-lista { display: grid; gap: 8px; }
+.ad { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 8px; align-items: center; }
+.ad-n { font-size: 12.5px; font-weight: 800; color: var(--text-2); }
+.ad-barras { display: grid; gap: 3px; }
+.ad-b { display: block; min-width: 26px; padding: 1px 6px; border-radius: 4px; font-size: 11.5px; font-weight: 800; color: #fff; white-space: nowrap; }
+.ad-b--antes { background: var(--border-lite); color: var(--text-1); }
+.leyenda i.ad-b--antes { background: var(--border-lite); }
+.doc-botones { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+@media (min-width: 900px) { .doc-botones { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.doc-botones .card + .card { margin-top: 0; }
+.doc-botones .toolbar { margin-bottom: 0; }
+.informe-acc { display: flex; gap: 8px; }

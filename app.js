@@ -14,8 +14,15 @@
   // ---------- Versión y novedades ----------
   // Al publicar cambios: añadir una entrada AL PRINCIPIO de NOVEDADES, poner su versión en los ?v= de index.html, en
   // APP_VERSION y subir CACHE_NAME en sw.js. Formato de versión: AAAA.NN.
-  const APP_VERSION = "2026.02";
+  const APP_VERSION = "2026.03";
   const NOVEDADES = [
+    { version: "2026.03", fecha: "Octubre 2026", titulo: "Acciones de mejora, reevaluación e informe AMFE", cambios: [
+      "Nuevo paso 7, Acciones de mejora: para cada fallo prioritario, una o varias acciones con qué, por qué, dónde, cuándo, quién y cómo (5W1H), su tipo, sobre qué actúa, su indicador y su estándar, y su estado.",
+      "La app distingue las medidas fuertes, intermedias y débiles, avisa si todas son de formación o recordatorios y de los plazos vencidos, y propone el «por qué» a partir del efecto del fallo.",
+      "«Traer de Indicadores»: usa un indicador que ya tengas en la app Indicadores, en este navegador o desde su copia de seguridad.",
+      "Nuevo paso 8, Reevaluar y cerrar: la puntuación esperada tras las acciones (IPR residual), cuánto baja el riesgo, las conclusiones (con texto propuesto), la fecha de la próxima revisión y el control del documento.",
+      "Informe AMFE completo y resumen para la Dirección, en Word editable y en PDF, con el mismo orden que el Documento Final del curso.",
+      "El Excel incluye las acciones y la reevaluación, y el ejemplo de Urgencias trae las acciones de los ejercicios del curso."] },
     { version: "2026.02", fecha: "Octubre 2026", titulo: "Priorizar y matriz de riesgos", cambios: [
       "Nuevo paso 6, Priorizar: los N fallos de mayor IPR (15 por defecto, como el curso) o los que superan un umbral de IPR.",
       "Los fallos de gravedad 9–10 se señalan siempre, y se puede marcar un fallo como «crítico» o añadirlo y quitarlo a mano, escribiendo el motivo (la app propone uno).",
@@ -33,7 +40,7 @@
       "Puntuación de gravedad, ocurrencia y detección con la escala a la vista, IPR automático, orden por IPR y avisos de las trampas más habituales.",
       "Ejemplo completo del Servicio de Urgencias (49 fallos), Aprende (7 temas), glosario, tabla imprimible y copia de seguridad."] }
   ];
-  const ENTREGA = 2;   // pasos ya construidos (ver L.PASOS[].entrega)
+  const ENTREGA = 3;   // pasos ya construidos (ver L.PASOS[].entrega)
 
   // ---------- Utilidades ----------
   const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -240,13 +247,21 @@
   let actual = null, pasoActual = 1;
   const abiertos = new Set();          // fallos desplegados en el paso 4
   let pegarAbierto = false;
-  const avisosDe = (a, n) => ({ 1: L.avisosProceso, 2: L.avisosEquipo, 4: L.avisosFallos, 5: L.avisosPuntuar, 6: L.avisosPriorizar }[n] || (() => []))(a);
+  const hoyIso = () => new Date().toISOString().slice(0, 10);
+  const avisosDe = (a, n) => ({ 1: L.avisosProceso, 2: L.avisosEquipo, 4: L.avisosFallos, 5: L.avisosPuntuar, 6: L.avisosPriorizar, 7: x => L.avisosMejorar(x, hoyIso()), 8: L.avisosCerrar }[n] || (() => []))(a);
   const avisosGenerales = (a, n) => avisosDe(a, n).filter(x => !x.fallo).map(avisoHtml).join("");
-  const avisosFallo = (a, n, id) => avisosDe(a, n).filter(x => x.fallo === id).map(avisoHtml).join("");
+  const avisosFallo = (a, n, id) => avisosDe(a, n).filter(x => x.fallo === id && !x.accion).map(avisoHtml).join("");
+  const avisosAccion = (a, id) => avisosDe(a, 7).filter(x => x.accion === id).map(avisoHtml).join("");
 
   function renderAmfe(a, n) {
     actual = a; pasoActual = n; nAyuda = 0;
-    if (document.body.classList.contains("ver-informe")) { renderTabla(a); return; }
+    if (document.body.classList.contains("ver-informe")) {
+      const fecha = new Date().toLocaleDateString("es-ES");
+      if (docActual === "informe") renderDoc(L.documentoInforme(a, fecha, tamMatriz));
+      else if (docActual === "resumen") renderDoc(L.documentoResumen(a, fecha));
+      else renderTabla(a);
+      return;
+    }
     const p = L.PASOS[n - 1], disp = pasosDisp();
     const prev = disp.filter(x => x.n < n).pop(), next = disp.find(x => x.n > n);
     const cuerpo = !disponible(p) ? pasoProximo(a, p) : RENDER[n](a);
@@ -579,7 +594,186 @@
       ${practica("Las apps <b>Mapa de Riesgos</b> y <b>Auditorías</b> podrán traer estos fallos, con su IPR y su prioridad, desde este mismo navegador. Si trabajáis en otro dispositivo, usad la copia de seguridad.")}`;
   }
 
-  const RENDER = { 1: paso1, 2: paso2, 4: paso4, 5: paso5, 6: paso6 };
+  // ---------- Paso 7 · Acciones de mejora ----------
+  let indImportados = null, indPara = null;   // indicadores traídos de la app Indicadores y la acción que los espera
+  const bac = (x, f) => `data-ac="${x.id}" data-f="${f}"`;
+  const buscaAccion = (a, id) => { for (const f of a.fallos) { const x = f.acciones.find(y => y.id === id); if (x) return { f, x }; } return null; };
+  const fzBadge = t => { const f = L.fuerzaMedida(t); return f ? `<span class="fz-b fz-b--${f}" title="${esc(L.FUERZAS[f].que)}">${L.FUERZAS[f].nom}</span>` : ""; };
+  const estadoBadge = x => `<span class="ea-b ea-b--${L.vencida(x, hoyIso()) ? "vencida" : x.estado}">${L.vencida(x, hoyIso()) ? "Vencida" : L.ESTADOS_ACCION[x.estado]}</span>`;
+  const segAc = (x, f, opciones) => `<div class="seg seg--wrap" role="group">${opciones.map(([v, t, tit]) => `<button type="button" class="${x[f] === v ? "active" : ""}" data-acpick="${x.id}" data-f="${f}" data-v="${v}"${tit ? ` title="${esc(tit)}"` : ""}>${t}</button>`).join("")}</div>`;
+  function zonaInd(x) {
+    if (indPara !== x.id || !indImportados) return "";
+    return `<div class="field no-print"><div class="field-head"><label class="field-label">Elige un indicador de la app Indicadores</label></div><div class="input-wrap"><select class="txt-in" data-act-sel="usar-ind" data-ac="${x.id}"><option value="">— ${plural(indImportados.length, "indicador", "indicadores")} —</option>${indImportados.map((y, i) => `<option value="${i}">${esc(L.corto(y.nombre, 90))}</option>`).join("")}</select></div></div>`;
+  }
+  function accCard(a, f, x, i) {
+    return `<div class="acc-card" data-acid="${x.id}">
+      <div class="sub-cab"><span class="eq-n">${i + 1}</span><b>Acción ${i + 1}</b><span data-zfz="${x.id}">${fzBadge(x.que)}</span>${estadoBadge(x)}
+        <span class="sub-acc no-print"><button type="button" class="link-btn link-btn--peligro" data-act="acc-del" data-id="${x.id}">Quitar</button></span></div>
+      ${campo(x, "que", "Qué: la acción", { bind: bac(x, "que"), area: true, ph: "p. ej. Checklist digital obligatorio antes de cerrar el triaje", help: "Concreta y verificable. Las acciones que cambian el sistema (obligar, automatizar, eliminar el paso que falla) son más fuertes que formar o recordar." })}
+      ${campo(x, "porque", "Por qué: lo que se quiere conseguir", { bind: bac(x, "porque"), area: true, ph: "p. ej. Para garantizar una valoración inicial completa", extra: `<div class="quick no-print"><button type="button" class="chip chip--accent" data-act="acc-porque" data-id="${x.id}">✎ Proponer a partir del efecto</button></div>` })}
+      <div class="dos-col">
+        ${campo(x, "donde", "Dónde", { bind: bac(x, "donde"), ph: "p. ej. Puesto de triaje" })}
+        ${campo(x, "quien", "Quién: responsable", { bind: bac(x, "quien"), ph: "p. ej. Supervisión de Enfermería", help: "Un cargo o una persona concreta, no «todos» ni «el servicio»." })}
+      </div>
+      <div class="dos-col">
+        ${campo(x, "plazo", "Cuándo: plazo", { bind: bac(x, "plazo"), ph: "p. ej. 1 mes" })}
+        ${campo(x, "fin", "Fecha de fin", { bind: bac(x, "fin"), tipo: "date", opt: true })}
+      </div>
+      ${campo(x, "como", "Cómo: pasos para hacerla", { bind: bac(x, "como"), area: true, ph: "p. ej. Configuración en el módulo de triaje, sesiones formativas y supervisión semanal" })}
+      <div class="field"><div class="field-head"><label class="field-label">Tipo de acción</label></div>${segAc(x, "tipo", Object.keys(L.TIPOS_ACCION).map(k => [k, L.TIPOS_ACCION[k].nom, L.TIPOS_ACCION[k].que]))}</div>
+      <div class="field"><div class="field-head"><label class="field-label">Qué cambia</label></div>${segAc(x, "clase", Object.keys(L.CLASES_ACCION).map(k => [k, L.CLASES_ACCION[k].nom]))}</div>
+      <div class="field"><div class="field-head"><label class="field-label">Sobre qué actúa</label></div><div class="quick">${Object.keys(L.ACTUA).map(k => `<button type="button" class="chip${x.actuaSobre.includes(k) ? " active" : ""}" data-acmulti="${x.id}" data-v="${k}">${L.ACTUA[k]}</button>`).join("")}</div></div>
+      <div class="acc-ind">
+        <div class="sub-cab"><b>Indicador de seguimiento</b><span class="sub-acc no-print"><button type="button" class="link-btn" data-act="ind-traer" data-id="${x.id}">Traer de Indicadores</button></span></div>
+        <div data-zind="${x.id}">${zonaInd(x)}</div>
+        ${campo(x, "indicador.nombre", "Indicador", { bind: bac(x, "indicador.nombre"), ph: "p. ej. % de triajes con las cuatro constantes registradas" })}
+        ${campo(x, "indicador.formula", "Fórmula", { bind: bac(x, "indicador.formula"), opt: true, ph: "p. ej. Triajes con TA, FC, SatO₂ y Tª / triajes realizados × 100" })}
+        <div class="dos-col">
+          ${campo(x, "indicador.estandar", "Estándar", { bind: bac(x, "indicador.estandar"), ph: "p. ej. ≥ 95 %" })}
+          ${campo(x, "indicador.fuente", "Fuente de datos", { bind: bac(x, "indicador.fuente"), opt: true, ph: "p. ej. Módulo de triaje" })}
+        </div>
+      </div>
+      <div class="field"><div class="field-head"><label class="field-label">¿Cumple los criterios de una buena acción?</label></div><div class="quick">${Object.keys(L.COMPROBACION).map(k => `<button type="button" class="chip${x.comprobacion[k] ? " active" : ""}" data-acchk="${x.id}" data-v="${k}" title="${esc(L.COMPROBACION[k].que)}">${x.comprobacion[k] ? "✓ " : ""}${L.COMPROBACION[k].nom}</button>`).join("")}</div></div>
+      <div class="field"><div class="field-head"><label class="field-label">Estado</label></div>${segAc(x, "estado", Object.keys(L.ESTADOS_ACCION).map(k => [k, L.ESTADOS_ACCION[k]]))}</div>
+      ${campo(x, "nota", "Nota de seguimiento", { bind: bac(x, "nota"), area: true, opt: true, ph: "p. ej. Piloto terminado en noviembre" })}
+      <div data-zac="${x.id}">${avisosAccion(a, x.id)}</div>
+    </div>`;
+  }
+  function resumen7(a) {
+    const m = L.resumenMejora(a, hoyIso());
+    if (!m.prioritarios) return "";
+    return `<span class="badge">${m.conAccion} de ${m.prioritarios} prioritarios con acción</span><span class="badge">${plural(m.acciones, "acción", "acciones")}</span>${Object.keys(L.ESTADOS_ACCION).filter(k => m.porEstado[k]).map(k => `<span class="ea-b ea-b--${k}">${L.cuentaEstado(k, m.porEstado[k])}</span>`).join("")}${m.vencidas ? `<span class="ea-b ea-b--vencida">${m.vencidas} ${m.vencidas === 1 ? "vencida" : "vencidas"}</span>` : ""}`;
+  }
+  function paso7(a) {
+    const PR = L.prioritarios(a), P = L.puestos(a.fallos);
+    return `
+      ${idea("Cada fallo prioritario necesita al menos una acción que <b>ataque su causa</b>, con un responsable, un plazo y un indicador para comprobar que funciona.")}
+      ${facil(`<p>Cada acción se describe con el modelo <b>5W1H</b>: <b>qué</b> se hace, <b>por qué</b>, <b>dónde</b>, <b>cuándo</b>, <b>quién</b> es responsable y <b>cómo</b> se hará.</p>
+        <ul><li><b>Corrección</b>: arregla el fallo cuando ocurre. <b>Acción correctora</b>: elimina la causa. <b>Acción preventiva</b>: elimina un riesgo antes de que ocurra.</li>
+        <li>Una buena acción es <b>específica</b> (ataca la causa), <b>factible</b>, <b>medible</b>, <b>sostenible</b> y <b>aceptable</b> para el equipo.</li>
+        <li>Marca <b>sobre qué actúa</b>: lo normal es que baje la ocurrencia o mejore la detección. Lo usarás en el paso 8 para volver a puntuar.</li></ul>
+        ${trampa("Formar, recordar o poner carteles son <b>medidas débiles</b>: dependen de la memoria y la buena voluntad. Combínalas con alguna que cambie el sistema (campo obligatorio, alerta automática, eliminar el paso que falla).")}`)}
+      <div class="res-linea" data-zona="resumen7">${resumen7(a)}</div>
+      <div data-zona="avisos">${avisosGenerales(a, 7)}</div>
+      ${PR.length ? PR.map(f => { const s = L.subDe(a, f); return `<section class="acc-f sub-c${s ? s.color : "x"}" data-af="${f.id}">
+        <div class="acc-f-cab"><span class="rg-puesto">${P[f.id] ? "#" + P[f.id] : "–"}</span><span class="pf-txt"><b>Nº ${f.num} · ${esc(f.fallo)}</b><span>${subPunto(s)}${esc(s ? s.nombre : "Sin subproceso")}</span></span>${iprBadge(L.iprDe(f))}</div>
+        <dl class="acc-f-dl">${lleno(f.efecto) ? `<div><dt>Efecto</dt><dd>${esc(f.efecto)}</dd></div>` : ""}${lleno(f.causa) ? `<div><dt>Causa</dt><dd>${esc(f.causa)}</dd></div>` : ""}${lleno(f.controles) ? `<div><dt>Controles actuales</dt><dd>${esc(f.controles)}</dd></div>` : ""}</dl>
+        <div data-zav="${f.id}">${avisosFallo(a, 7, f.id)}</div>
+        ${f.acciones.map((x, i) => accCard(a, f, x, i)).join("")}
+        <button class="btn btn--sm no-print" data-act="acc-add" data-id="${f.id}">+ ${f.acciones.length ? "Otra acción" : "Añadir una acción"}</button>
+      </section>`; }).join("") : `<div class="placeholder-box"><p>No hay fallos prioritarios. <a href="#/amfe/${a.id}/6">Elígelos en el paso 6</a>.</p></div>`}
+      ${PR.length ? `<div class="toolbar no-print sep-arriba"><button class="btn" data-act="excel">Exportar a Excel</button></div>` : ""}`;
+  }
+
+  // ---------- Paso 8 · Reevaluar y cerrar ----------
+  const bfr = (f, k) => `data-fr="${f.id}" data-f="${k}"`;
+  function resFila(f) {
+    const v0 = L.iprDe(f), v1 = L.iprResidual(f);
+    if (v1) return `${iprBadge(v0)} → ${iprBadge(v1)} <b class="red-pct${v1 < v0 ? "" : " red-pct--mal"}">${v1 < v0 ? "−" + Math.round((1 - v1 / v0) * 100) + " %" : "no baja"}</b>`;
+    if ([f.residual.g, f.residual.o, f.residual.d].some(lleno)) return `<span class="ipr-falta">Enteros del 1 al 10</span>`;
+    return `${iprBadge(v0)} → <span class="ipr-badge niv--sin">IPR tras acciones</span>`;
+  }
+  function filaResidual(a, f) {
+    const s = L.subDe(a, f), act = new Set(f.acciones.flatMap(x => x.actuaSobre));
+    return `<div class="punt sub-c${s ? s.color : "x"}" data-rid="${f.id}">
+      <div class="punt-txt"><span class="rg-puesto">Nº ${f.num}</span><span><b>${esc(f.fallo)}</b><span class="punt-ef">${L.accionesDe(f).map(x => `• ${esc(L.corto(x.que, 90))} ${estadoBadge(x)}`).join("<br>")}</span></span></div>
+      <p class="punt-esc">Antes: <b>G ${esc(f.g)} · O ${esc(f.o)} · D ${esc(f.d)}</b>${act.size ? ` · Las acciones actúan sobre: ${[...act].map(k => L.ACTUA[k].toLowerCase()).join(", ")}` : ""}</p>
+      <div class="punt-god">
+        ${["g", "o", "d"].map(k => `<label class="god-c"><span>${L.ESCALA_NOM[k]} tras</span><input class="txt-in" ${bfr(f, k)} value="${esc(f.residual[k])}" inputmode="numeric" maxlength="2" placeholder="${esc(f[k])}" aria-label="${L.ESCALA_NOM[k]} del fallo ${f.num} tras las acciones" /></label>`).join("")}
+        <div class="punt-ipr punt-ipr--res" data-zres="${f.id}">${resFila(f)}</div>
+      </div>
+      ${campo(f, "residual.nota", "Nota", { bind: bfr(f, "nota"), opt: true, ph: "p. ej. Esperado cuando el checklist esté implantado" })}
+      <div data-zav="${f.id}">${avisosFallo(a, 8, f.id)}</div>
+    </div>`;
+  }
+  function grafico8(a) {
+    const F = L.conAcciones(a).filter(L.iprResidual);
+    if (!F.length) return `<p class="field-sub">Cuando vuelvas a puntuar los fallos, aquí verás el antes y el después.</p>`;
+    const max = Math.max(...F.map(L.iprDe)), m = L.resumenMejora(a, "");
+    return `<div class="ad-lista">${F.map(f => { const v0 = L.iprDe(f), v1 = L.iprResidual(f); return `<div class="ad"><span class="ad-n">Nº ${f.num}</span><div class="ad-barras" title="${esc(f.fallo)}"><span class="ad-b ad-b--antes" style="width:${Math.round(v0 / max * 100)}%">${v0}</span><span class="ad-b ad-b--desp niv-fill--${nivelTxt(v1)}" style="width:${Math.max(6, Math.round(v1 / max * 100))}%">${v1}</span></div></div>`; }).join("")}</div>
+      <div class="leyenda"><span><i class="ad-b--antes"></i>IPR inicial</span><span><i class="niv-fill--medio"></i>IPR tras las acciones (color según su nivel)</span></div>
+      <p class="field-sub">En conjunto, el IPR de estos ${plural(F.length, "fallo", "fallos")} pasaría de <b>${m.iprInicial}</b> a <b>${m.iprResidual}</b>: <b>un ${m.reduccion} % menos</b>.</p>`;
+  }
+  function personasHtml(a, k, titulo) {
+    return `<div class="personas"><p class="personas-t">${titulo}</p>${a.control[k].map((x, i) => `<div class="persona">
+      <input class="txt-in" data-cp="${k}" data-i="${i}" data-f="nombre" value="${esc(x.nombre)}" placeholder="Nombre (opcional)" autocomplete="off" />
+      <input class="txt-in" data-cp="${k}" data-i="${i}" data-f="cargo" value="${esc(x.cargo)}" placeholder="Cargo" autocomplete="off" />
+      <button type="button" class="icon-btn no-print" data-act="cp-del" data-k="${k}" data-i="${i}" aria-label="Quitar">✕</button></div>`).join("")}
+      <button type="button" class="link-btn no-print" data-act="cp-add" data-k="${k}">+ Añadir persona</button></div>`;
+  }
+  function controlHtml(a) {
+    return `${personasHtml(a, "elaborado", "Elaborado por")}${personasHtml(a, "revisado", "Revisado por")}${personasHtml(a, "aprobado", "Aprobado por")}
+      <div class="personas"><p class="personas-t">Histórico de revisiones</p>${a.control.historial.map((h, i) => `<div class="persona persona--hist">
+        <input class="txt-in" data-ch="${i}" data-f="edicion" value="${esc(h.edicion)}" placeholder="Ed." autocomplete="off" />
+        <input class="txt-in" type="date" data-ch="${i}" data-f="fecha" value="${esc(h.fecha)}" />
+        <input class="txt-in" data-ch="${i}" data-f="cambio" value="${esc(h.cambio)}" placeholder="Qué cambia" autocomplete="off" />
+        <button type="button" class="icon-btn no-print" data-act="ch-del" data-i="${i}" aria-label="Quitar">✕</button></div>`).join("")}
+        <button type="button" class="link-btn no-print" data-act="ch-add">+ Nueva edición</button></div>`;
+  }
+  function paso8(a) {
+    const F = L.conAcciones(a);
+    return `
+      ${idea("El AMFE termina cuando el riesgo baja. Volved a puntuar cada fallo pensando en cómo quedará <b>cuando las acciones funcionen</b>.")}
+      ${facil(`<p>El <b>IPR residual</b> es el que queda después de aplicar las acciones. Puede ser una previsión (al aprobar el plan) o una medida real (cuando las acciones ya están implantadas y los indicadores lo confirman).</p>
+        <ul><li>Lo normal es que baje la <b>ocurrencia</b> (el fallo pasa menos) o la <b>detección</b> (se descubre antes de que dañe).</li><li>La <b>gravedad</b> del daño casi nunca cambia si no se cambia el proceso.</li></ul>
+        <p>Después: conclusiones, control del documento y <b>fecha de la próxima revisión</b>. Los riesgos cambian con el tiempo, con las acciones y con los incidentes.</p>`)}
+      <h2 class="sec-t">Reevaluación del riesgo</h2>
+      ${F.length ? `<div class="punt-lista">${F.map(f => filaResidual(a, f)).join("")}</div>
+        <div class="card chart-card" data-zona="grafico8">${grafico8(a)}</div>`
+        : `<div class="placeholder-box"><p>Aún no hay acciones de mejora. <a href="#/amfe/${a.id}/7">Defínelas en el paso 7</a>.</p></div>`}
+      <h2 class="sec-t">Conclusiones</h2>
+      <div class="card">
+        ${campo(a, "introduccion", "Introducción del informe", { area: true, opt: true, rows: 3, ph: "Si la dejas vacía, el informe usa un texto estándar", extra: `<div class="quick no-print"><button type="button" class="chip chip--accent" data-act="sug-intro">✎ Proponer introducción</button></div>` })}
+        ${campo(a, "conclusiones", "Conclusiones", { area: true, rows: 4, ph: "Qué se ha encontrado, qué se va a hacer y cuánto bajará el riesgo", extra: `<div class="quick no-print"><button type="button" class="chip chip--accent" data-act="sug-concl">✎ Proponer conclusiones con las cifras</button></div>` })}
+        ${campo(a, "proxRevision", "Próxima revisión del AMFE", { tipo: "date", help: "Lo habitual es revisarlo cada año, o antes si cambia el proceso o hay un incidente relacionado." })}
+      </div>
+      <h2 class="sec-t">Control del documento</h2>
+      <div class="card">${controlHtml(a)}</div>
+      <div data-zona="avisos">${avisosGenerales(a, 8)}</div>
+      <h2 class="sec-t">Documentos</h2>
+      <div class="doc-botones">
+        <div class="card"><h3 class="sub-h">Informe AMFE</h3><p class="field-sub">El documento completo, con el orden del Documento Final del curso: control del documento, proceso, equipo, resultados, matriz, acciones, reevaluación, conclusiones y anexos.</p>
+          <div class="toolbar"><button class="btn btn--primary" data-act="doc-word" data-doc="informe">⬇ Word</button><button class="btn" data-act="doc-ver" data-doc="informe">Ver / PDF</button></div></div>
+        <div class="card"><h3 class="sub-h">Resumen para la Dirección</h3><p class="field-sub">Una página: las cifras, los cinco riesgos más importantes con su acción, y la conclusión.</p>
+          <div class="toolbar"><button class="btn btn--primary" data-act="doc-word" data-doc="resumen">⬇ Word</button><button class="btn" data-act="doc-ver" data-doc="resumen">Ver / PDF</button></div></div>
+        <div class="card"><h3 class="sub-h">Tabla y Excel</h3><p class="field-sub">La tabla AMFE completa para imprimir y el libro de Excel con todas las hojas.</p>
+          <div class="toolbar"><button class="btn" data-act="informe">Tabla / PDF</button><button class="btn" data-act="excel">Excel</button></div></div>
+      </div>`;
+  }
+
+  const RENDER = { 1: paso1, 2: paso2, 4: paso4, 5: paso5, 6: paso6, 7: paso7, 8: paso8 };
+
+  // ---------- Documentos: bloques → HTML (vista previa, imprimir y PDF) y → Word ----------
+  function bloquesHtml(bloques) {
+    const celda = (c, cab) => { const o = c !== null && typeof c === "object" ? c : { texto: c }; const st = o.fondo ? ` style="background:#${o.fondo}"` : ""; const cl = [o.centro ? "c" : "", o.negrita ? "b" : ""].filter(Boolean).join(" "); return `<${cab ? "th" : "td"}${cl ? ` class="${cl}"` : ""}${st}>${escMl(o.texto)}</${cab ? "th" : "td"}>`; };
+    return bloques.map(b => {
+      if (b.t === "portada") return `<div class="doc-portada"><h1>${esc(b.titulo)}</h1>${b.sub ? `<p class="doc-sub">${esc(b.sub)}</p>` : ""}${(b.extra || []).map(x => `<p>${esc(x)}</p>`).join("")}</div>`;
+      if (b.t === "h1") return `<h2 class="doc-h1">${esc(b.texto)}</h2>`;
+      if (b.t === "h2") return `<h3 class="doc-h2">${esc(b.texto)}</h3>`;
+      if (b.t === "p") return `<p class="doc-p${b.estilo === "nota" ? " doc-nota" : ""}">${b.runs ? b.runs.map(r => r.negrita ? `<b>${escMl(r.texto)}</b>` : escMl(r.texto)).join("") : escMl(b.texto)}</p>`;
+      if (b.t === "lista") return `<ul class="doc-ul">${b.items.map(i => `<li>${esc(typeof i === "string" ? i : i.texto)}</li>`).join("")}</ul>`;
+      if (b.t === "salto") return `<div class="doc-salto"></div>`;
+      if (b.t === "tabla") {
+        const suma = (b.anchos || []).reduce((a, x) => a + x, 0);
+        const cols = b.anchos ? `<colgroup>${b.anchos.map(w => `<col style="width:${(w / suma * 100).toFixed(1)}%">`).join("")}</colgroup>` : "";
+        return `<div class="table-wrap"><table class="doc-t${b.fuente && b.fuente < 9 ? " doc-t--peq" : ""}">${cols}${b.cab && !b.sinCab ? `<thead><tr>${b.cab.map(c => celda(c, true)).join("")}</tr></thead>` : ""}<tbody>${b.filas.map(f => `<tr>${f.map(c => celda(c, false)).join("")}</tr>`).join("")}</tbody></table></div>`;
+      }
+      return "";
+    }).join("");
+  }
+  function renderDoc(doc) {
+    view.innerHTML = `<div class="informe-bar informe-only"><button class="btn" data-act="volver">← Volver</button><span class="informe-acc"><button class="btn" data-act="doc-word" data-doc="${docActual}">⬇ Word</button><button class="btn btn--primary" data-act="imprimir">Guardar / imprimir</button></span></div>
+      <div class="doc-prev doc-prev--informe">${bloquesHtml(doc.bloques)}</div>${informePie()}`;
+  }
+  function descargarWord(a, cual) {
+    try {
+      const fecha = new Date().toLocaleDateString("es-ES");
+      const doc = cual === "resumen" ? L.documentoResumen(a, fecha) : L.documentoInforme(a, fecha, tamMatriz);
+      const bytes = window.Docx.construirDocx(Object.assign({ pie: doc.titulo + " · Generado con la app AMFE" }, doc));
+      const base = (cual === "resumen" ? "AMFE Resumen " : "AMFE ") + (nombreAmfe(a) || "").slice(0, 60);
+      compartirOBajar(new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" }), `${base.replace(/[\\/:*?"<>|%]/g, "").trim()} ${fechaArchivo()}.docx`, "Word descargado. Ábrelo con Word, Pages o LibreOffice y ajústalo a tu gusto.");
+    } catch (e) { toast("No se ha podido crear el Word.", 4000); }
+  }
 
   // ---------- Vista imprimible: la tabla AMFE ----------
   function renderTabla(a) {
@@ -626,12 +820,16 @@
       nsub: () => String(a.subprocesos.length), neq: () => String(a.equipo.length), nses: () => String(a.sesiones.length),
       resumen5: () => resumen5(L.resumen(a)), grafico: () => grafico(a), orden: () => tablaOrden(a),
       criterio: () => criterioRes(a), matriz: () => matrizHtml(a), porsub: () => porSubHtml(a),
-      lista6: () => listaPrio(a)
+      lista6: () => listaPrio(a),
+      resumen7: () => resumen7(a), grafico8: () => grafico8(a)
     };
     // La lista del paso 6 solo se repinta si se cambia el criterio (si se escribe un motivo dentro, se perdería el foco)
     if (!todo) delete Z.lista6;
     $$("[data-zona]").forEach(el => { const f = Z[el.dataset.zona]; if (f) el.innerHTML = f(); });
     $$("[data-zav]").forEach(el => { el.innerHTML = avisosFallo(a, n, el.dataset.zav); });
+    $$("[data-zac]").forEach(el => { el.innerHTML = avisosAccion(a, el.dataset.zac); });
+    $$("[data-zfz]").forEach(el => { const r = buscaAccion(a, el.dataset.zfz); if (r) el.innerHTML = fzBadge(r.x.que); });
+    $$("[data-zres]").forEach(el => { const f = a.fallos.find(x => x.id === el.dataset.zres); if (f) el.innerHTML = resFila(f); });
     if (idFallo) {
       const f = a.fallos.find(x => x.id === idFallo); if (!f) return;
       const t = $(`.fallo[data-fid="${f.id}"] .rg-toggle`); if (t) t.innerHTML = falloCabInner(a, f);
@@ -845,7 +1043,7 @@
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = nombre;
     document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 200);
   }
-  function irInforme() { location.hash = rutaActual() + "?informe=1"; }
+  function irInforme(doc) { location.hash = rutaActual() + "?informe=1" + (doc ? "&doc=" + doc : ""); }
   function imprimir() {
     if (esIOS()) { guardarPDF(); return; }
     if (!document.body.classList.contains("ver-informe")) { irInforme(); setTimeout(() => window.print(), 400); return; }
@@ -922,11 +1120,12 @@
   const NAV = [["", "Inicio"], ["amfe", "Mis AMFE"], ["ejemplos", "Ejemplos"], ["aprende", "Aprende"], ["glosario", "Glosario"]];
   function buildNav() { $("#calc-nav").innerHTML = NAV.map(([r, t]) => `<a href="#/${r}" data-r="${r}">${t}</a>`).join(""); }
   function noEncontrado(que, href, txt) { view.innerHTML = `<div class="error-box">No se encuentra ${que} en este dispositivo.</div><p><a href="${href}">${txt}</a></p>`; }
-  let previo = null;
+  let previo = null, docActual = "";
   function route() {
     const [ruta, qs] = (location.hash.replace(/^#\/?/, "") || "").split("?");
     const partes = ruta.split("/"), q = new URLSearchParams(qs || "");
     const informe = q.get("informe") === "1";
+    docActual = informe ? (q.get("doc") || "") : "";
     document.body.classList.toggle("ver-informe", informe);
     actual = null;
     const idR = partes[1] || "", ej = ejemplos();
@@ -990,7 +1189,21 @@
       if (esSel) { abiertos.add(fa.id); repintar(); } else refrescar(fa.id);
       return;
     }
+    if (t.dataset.ac) { const r = buscaAccion(a, t.dataset.ac); if (!r) return; setPath(r.x, f, t.value); tocado(a); refrescar(); return; }
+    if (t.dataset.fr) {
+      const fa = buscaEn(a.fallos, t.dataset.fr); if (!fa) return;
+      fa.residual[f] = ["g", "o", "d"].includes(f) ? t.value.trim() : t.value; tocado(a); refrescar(fa.id); return;
+    }
+    if (t.dataset.cp) { const x = a.control[t.dataset.cp][Number(t.dataset.i)]; if (!x) return; x[f] = t.value; tocado(a); refrescar(); return; }
+    if (t.dataset.ch) { const x = a.control.historial[Number(t.dataset.ch)]; if (!x) return; x[f] = t.value; tocado(a); return; }
     if (t.dataset.k) { setPath(a, t.dataset.k, t.value); tocado(a); refrescar(null, /^prioridad\./.test(t.dataset.k)); }
+  });
+  view.addEventListener("change", e => {
+    const s = e.target.closest("[data-act-sel='usar-ind']"), a = actual;
+    if (!s || !a || s.value === "" || !indImportados) return;
+    const r = buscaAccion(a, s.dataset.ac), y = indImportados[Number(s.value)]; if (!r || !y) return;
+    const hacer = () => { Object.assign(r.x.indicador, y); indPara = null; tocado(a); repintar(); toast("Indicador copiado. Revisa el estándar.", 3000); };
+    if (lleno(r.x.indicador.nombre)) confirmar("<p>Se sustituirá el indicador de esta acción por el elegido.</p>", "Sustituir", hacer, { peligro: false }); else hacer();
   });
   view.addEventListener("toggle", e => {
     if (e.target.matches && e.target.matches("details[data-recordar]") && !document.body.classList.contains("ver-informe")) escribir(KEY_FACIL, e.target.open ? "1" : "0");
@@ -1010,6 +1223,20 @@
       const x = buscaEn(a.sesiones, b.dataset.asis); if (!x) return;
       const i = x.asistentes.indexOf(b.dataset.v); if (i < 0) x.asistentes.push(b.dataset.v); else x.asistentes.splice(i, 1);
       b.classList.toggle("active", i < 0); tocado(a); return;
+    }
+    if ((b = t.closest("[data-acpick]")) && a) {
+      const r = buscaAccion(a, b.dataset.acpick); if (!r) return;
+      r.x[b.dataset.f] = b.dataset.f === "clase" && r.x.clase === b.dataset.v ? "" : b.dataset.v; tocado(a); repintar(); return;
+    }
+    if ((b = t.closest("[data-acmulti]")) && a) {
+      const r = buscaAccion(a, b.dataset.acmulti); if (!r) return;
+      const l = r.x.actuaSobre, i = l.indexOf(b.dataset.v); if (i < 0) l.push(b.dataset.v); else l.splice(i, 1);
+      b.classList.toggle("active", i < 0); tocado(a); refrescar(); return;
+    }
+    if ((b = t.closest("[data-acchk]")) && a) {
+      const r = buscaAccion(a, b.dataset.acchk); if (!r) return;
+      const k = b.dataset.v; r.x.comprobacion[k] = !r.x.comprobacion[k];
+      b.classList.toggle("active", r.x.comprobacion[k]); b.textContent = (r.x.comprobacion[k] ? "✓ " : "") + L.COMPROBACION[k].nom; tocado(a); return;
     }
     if (!(b = t.closest("[data-act]"))) return;
     const act = b.dataset.act, id = b.dataset.id;
@@ -1134,6 +1361,45 @@
       if (lleno(f[k])) confirmar("<p>Se sustituirá el motivo que has escrito por el propuesto.</p>", "Sustituir", hacer, { peligro: false }); else hacer();
     }
     else if (act === "excel" && a) exportarExcel(a);
+    // --- Paso 7 ---
+    else if (act === "acc-add" && a) {
+      const f = buscaEn(a.fallos, id); if (!f) return;
+      const x = L.nuevaAccion(genId()); f.acciones.push(x); tocado(a); repintar();
+      const el = $(`[data-ac="${x.id}"][data-f="que"]`); if (el) { el.focus(); el.scrollIntoView({ block: "center" }); }
+    }
+    else if (act === "acc-del" && a) {
+      const r = buscaAccion(a, id); if (!r) return;
+      const hacer = () => { r.f.acciones = r.f.acciones.filter(y => y.id !== id); tocado(a); repintar(); };
+      if (lleno(r.x.que) || lleno(r.x.como)) confirmar(`<p>Se quitará la acción «${esc(L.corto(r.x.que || "sin describir", 70))}».</p>`, "Quitar", hacer); else hacer();
+    }
+    else if (act === "acc-porque" && a) {
+      const r = buscaAccion(a, id); if (!r) return;
+      const s = L.sugerirPorque(r.f); if (!s) { toast("El fallo no tiene efecto escrito (paso 4).", 3000); return; }
+      const hacer = () => { r.x.porque = s; tocado(a); repintar(); };
+      if (lleno(r.x.porque)) confirmar("<p>Se sustituirá lo que has escrito por el texto propuesto.</p>", "Sustituir", hacer, { peligro: false }); else hacer();
+    }
+    else if (act === "ind-traer" && a) {
+      let l = null; try { l = L.indicadoresDe(JSON.parse(leer("indicadores-datos") || "null")); } catch (er) { /* */ }
+      indPara = id;
+      if (l && l.length) { indImportados = l; const z = $(`[data-zind="${id}"]`); if (z) z.innerHTML = zonaInd(buscaAccion(a, id).x); }
+      else confirmar("<p>No hay indicadores de la app <b>Indicadores</b> en este navegador.</p><p>Si los tienes en otro dispositivo, carga su copia de seguridad (.json).</p>", "Cargar una copia", () => $("#input-ind").click(), { titulo: "Traer de Indicadores", peligro: false });
+    }
+    // --- Paso 8 ---
+    else if ((act === "sug-concl" || act === "sug-intro") && a) {
+      const k = act === "sug-concl" ? "conclusiones" : "introduccion", s = k === "conclusiones" ? L.conclusionesSugeridas(a) : L.introduccionSugerida(a);
+      if (!s) { toast("Aún no hay datos suficientes para proponer un texto.", 3000); return; }
+      const hacer = () => { a[k] = s; tocado(a); repintar(); };
+      if (lleno(a[k])) confirmar("<p>Se sustituirá lo que has escrito por el texto propuesto.</p>", "Sustituir", hacer, { peligro: false }); else hacer();
+    }
+    else if (act === "cp-add" && a) { a.control[b.dataset.k].push(L.nuevaPersona()); tocado(a); repintar(); }
+    else if (act === "cp-del" && a) { a.control[b.dataset.k].splice(Number(b.dataset.i), 1); tocado(a); repintar(); }
+    else if (act === "ch-add" && a) {
+      const H = a.control.historial, ult = H.length ? parseInt(H[H.length - 1].edicion, 10) : -1;
+      H.push({ edicion: String((Number.isFinite(ult) ? ult : -1) + 1).padStart(2, "0"), fecha: hoyIso(), cambio: "" }); tocado(a); repintar();
+    }
+    else if (act === "ch-del" && a) { a.control.historial.splice(Number(b.dataset.i), 1); tocado(a); repintar(); }
+    else if (act === "doc-ver") irInforme(b.dataset.doc);
+    else if (act === "doc-word" && a) descargarWord(a, b.dataset.doc);
     // --- Generales ---
     else if (act === "informe") irInforme();
     else if (act === "volver") location.hash = rutaActual();
@@ -1143,6 +1409,17 @@
   });
   $("#banner-copiar").addEventListener("click", copiarAMisDatos);
   $("#input-importar").addEventListener("change", e => { const f = e.target.files && e.target.files[0]; if (f) importar(f); e.target.value = ""; });
+  // Copia de seguridad de la app Indicadores (para «Traer de Indicadores» desde otro dispositivo)
+  $("#input-ind").addEventListener("change", e => {
+    const f = e.target.files && e.target.files[0]; e.target.value = ""; if (!f) return;
+    const fr = new FileReader();
+    fr.onload = () => {
+      let l = null; try { l = L.indicadoresDe(JSON.parse(fr.result)); } catch (er) { /* */ }
+      if (!l || !l.length) { toast("Ese archivo no es una copia de la app Indicadores (o no tiene indicadores con nombre).", 4500); return; }
+      indImportados = l; if (actual) repintar(); toast(`Cargados ${plural(l.length, "indicador", "indicadores")}. Elige el que quieras usar.`, 3500);
+    };
+    fr.readAsText(f);
+  });
 
   // Imprimir: abrir los desplegables y restaurarlos después
   let cerrados = [];

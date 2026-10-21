@@ -124,10 +124,10 @@
           <p>Las acciones correctoras y preventivas son las <b>acciones de mejora</b>.</p>` },
         { t: "Medir y volver a puntuar", h: `<p>Cada acción necesita un <b>indicador</b> con su <b>estándar</b> (por ejemplo, «% de triajes con las cuatro constantes registradas», estándar ≥ 95 %). Las auditorías comprueban después si se aplica.</p>
           <p>Una acción suele bajar la <b>ocurrencia</b> o mejorar la <b>detección</b>; la <b>gravedad</b> del daño casi nunca cambia si no se cambia el proceso.</p>
-          <p>En la app, las acciones y la reevaluación llegan en una próxima versión.</p>` }
+          <p>En la app, el paso 7 recoge cada acción con su 5W1H, su tipo, su fuerza y su indicador, y el paso 8 calcula el IPR residual y genera el informe AMFE en Word y PDF.</p>` }
       ],
       minicaso: `<p>Para <i>omisión de constantes clave en triaje</i> (IPR 343): <b>qué</b>, checklist digital obligatorio antes de cerrar el triaje (TA, FC, SatO₂ y temperatura); <b>por qué</b>, para una valoración inicial completa y homogénea; <b>dónde</b>, puesto de triaje; <b>cuándo</b>, en 1 mes; <b>quién</b>, supervisión de enfermería de Urgencias; <b>cómo</b>, configuración en el módulo de triaje, sesiones formativas y supervisión semanal.</p>`,
-      practica: { texto: "Ver el ejemplo de Urgencias", href: "#/amfe/ej-amfe-urg/1" } }
+      practica: { texto: "Ver las acciones del ejemplo", href: "#/amfe/ej-amfe-urg/7" } }
   ];
 
   // ---------- Glosario ----------
@@ -255,6 +255,22 @@
     3: "Se pregunta por alergias en admisión, pero no de forma sistemática.",
     11: "Protocolo de identificación e impresora de pulseras en el triaje."
   };
+  // Acciones de mejora 5W1H de los ejercicios 13a, 13b y 13c resueltos y del Documento Final (fallos nº 10, 8, 5, 15, 29, 9, 23, 36 y 45).
+  // El curso no trae indicador, estándar, estado ni fecha de fin: se han añadido para el ejemplo.
+  // [nº, qué, por qué, dónde, plazo, fin, quién, cómo, tipo, clase, actúa sobre, indicador, estándar, fuente, estado]
+  const ACCIONES_URG = [
+    [10, "Establecer un checklist digital obligatorio antes de cerrar el triaje con los parámetros mínimos: TA, FC, SatO₂ y temperatura", "Para garantizar una valoración inicial completa y homogénea de todos los pacientes", "Puesto de triaje", "1 mes", "2025-12-15", "Supervisora de Enfermería de Urgencias", "Configuración del checklist en el módulo de triaje de la historia digital, sesiones formativas y supervisión semanal", "correctora", "tecnologia", ["o", "d"], "% de triajes con TA, FC, SatO₂ y temperatura registradas", "≥ 95 %", "Módulo de triaje de la historia digital", "verificada"],
+    [8, "Implantar una auditoría clínica mensual de triajes con doble revisión y retroalimentación individual", "Para mejorar la calidad y la homogeneidad en la asignación de los niveles de prioridad", "Puesto de triaje", "2 meses", "2026-01-15", "Coordinador médico y Supervisora de Enfermería", "Selección aleatoria de 20 historias al mes, revisión ciega por un profesional experto e informe con los errores detectados y formación orientada", "correctora", "procedimiento", ["o", "d"], "% de triajes con nivel de prioridad concordante en la doble revisión", "≥ 90 %", "Auditoría mensual de triaje", "hecha"],
+    [5, "Configurar una alerta visible automática en el campo de admisión para pacientes con antecedentes relevantes registrados en la historia clínica", "Para evitar omisiones críticas en pacientes con patologías relevantes en su atención urgente", "Puesto de admisión", "1 mes", "2025-12-15", "Responsable TIC y Dirección Médica", "Modificación del sistema informático, prueba piloto y formación del personal administrativo", "preventiva", "tecnologia", ["d"], "% de pacientes con antecedentes relevantes en los que salta la alerta en admisión", "≥ 95 %", "Sistema informático de admisión", "hecha"],
+    [15, "Implementar reevaluaciones clínicas programadas cada 90 minutos para los pacientes en espera", "Para disminuir los riesgos clínicos en pacientes cuya situación puede agravarse sin control", "Sala de espera del Servicio de Urgencias", "Inmediato, con 1 mes de piloto", "2025-12-01", "Supervisor/a de enfermería de Urgencias", "Modificando el protocolo de espera, asignando un responsable por turno y registrando la reevaluación en la historia clínica", "correctora", "procedimiento", ["o", "d"], "% de pacientes con espera > 90 min con reevaluación registrada", "≥ 90 %", "Historia clínica (registro de reevaluaciones)", "verificada"],
+    [29, "Establecer la verificación activa y el doble chequeo de la pulsera antes de salir a pruebas", "Para garantizar la identificación segura en los traslados y evitar errores de identidad", "Box de exploración y área de pruebas", "2 semanas", "2025-11-30", "Personal de enfermería de boxes", "Listado de control obligatorio antes del traslado, formación al personal y auditoría semanal de cumplimiento", "correctora", "procedimiento", ["o", "d"], "% de traslados a pruebas con la pulsera verificada en el listado de control", "100 %", "Listado de control de traslados", "verificada"],
+    [9, "Incluir una alerta de fragilidad en el triaje mediante un cuestionario breve y estructurado", "Para prevenir riesgos en pacientes vulnerables que no se detectan al principio", "Puesto de triaje", "1 mes", "2025-12-15", "Profesional de triaje", "Añadiendo ítems al sistema informático de triaje (edad, dependencia, deterioro cognitivo), con formación previa", "preventiva", "tecnologia", ["o", "d"], "% de pacientes de 75 años o más con el cuestionario de fragilidad completado en el triaje", "≥ 90 %", "Módulo de triaje", "hecha"],
+    [23, "Implementar un checklist obligatorio de conciliación de la medicación en las primeras indicaciones", "Para evitar interacciones y errores por desconocer la medicación crónica del paciente", "Historia clínica electrónica", "1 mes", "2026-01-31", "Jefe de Urgencias y Responsable de Calidad", "Campo obligatorio en el parte médico inicial, formación breve del personal y auditoría mensual de cumplimiento", "correctora", "tecnologia", ["o", "d"], "% de pacientes con la medicación habitual conciliada en las primeras indicaciones", "≥ 85 %", "Historia clínica electrónica", "curso"],
+    [36, "Activar un sistema de alertas del laboratorio ante resultados críticos", "Para reducir las omisiones de resultados importantes y evitar retrasos en la actuación médica", "Sistema informático de resultados del laboratorio", "1 mes", "2025-12-31", "Responsable de Sistemas y Jefe de Urgencias", "Configurando alertas automáticas por valores críticos y verificando que el clínico los ha visto antes del alta", "preventiva", "tecnologia", ["o", "d"], "% de resultados críticos con visualización verificada antes del alta", "100 %", "Sistema de laboratorio", "hecha"],
+    [45, "Crear un canal directo de comunicación y un parte de ingreso normalizado entre Urgencias y la planta", "Para minimizar retrasos en la ubicación del paciente y mejorar la continuidad asistencial", "Área de admisión e ingreso y planta hospitalaria", "2 semanas", "2025-12-15", "Supervisor de Urgencias y Supervisor de planta", "Grupo de mensajería institucional y plantilla electrónica compartida con la información clínica relevante para la planta receptora", "correctora", "organizativa", ["o", "d"], "% de ingresos con el parte de ingreso normalizado enviado a la planta", "≥ 95 %", "Registro de ingresos", "pendiente"]
+  ];
+  // G·O·D esperados tras las acciones (añadidos para el ejemplo; la gravedad no cambia)
+  const RESIDUAL_URG = { 10: [7, 4, 3], 8: [8, 5, 4], 5: [7, 6, 3], 15: [7, 5, 4], 29: [7, 3, 4], 9: [7, 4, 4], 23: [7, 4, 4], 36: [7, 5, 3], 45: [7, 4, 5] };
   function amfeUrgencias() {
     const subs = SUBS_URG.map(([nombre, descripcion, inicio, fin, roles], i) => ({ id: "ej-urg-s" + (i + 1), nombre, descripcion, inicio, fin, roles, color: String(i) }));
     const equipo = EQUIPO_URG.map(([perfil, cargo, rol, justificacion], i) => ({ id: "ej-urg-m" + (i + 1), perfil, cargo, rol, justificacion, nombre: "" }));
@@ -271,9 +287,22 @@
         { id: "ej-urg-x2", fecha: "2025-10-21", actividad: "Lluvia de ideas y técnica de grupo nominal", duracion: "2 h", asistentes: todos.slice(), resultados: "Identificación consensuada de 49 fallos potenciales" },
         { id: "ej-urg-x3", fecha: "2025-11-04", actividad: "Asignación de escalas G-O-D y cálculo del IPR", duracion: "2 h", asistentes: todos.slice(), resultados: "Priorización de los fallos según su criticidad e impacto en el proceso" }
       ],
-      fallos: FALLOS_URG.map(([num, s, fallo, efecto, causa, g, o, d]) => ({ id: "ej-urg-f" + num, num, subprocesoId: subs[s].id, fallo, efecto, causa, controles: CONTROLES_URG[num] || "", g: String(g), o: String(o), d: String(d) })),
+      fallos: FALLOS_URG.map(([num, s, fallo, efecto, causa, g, o, d]) => {
+        const acc = ACCIONES_URG.filter(x => x[0] === num).map(([, que, porque, donde, plazo, fin, quien, como, tipo, clase, actuaSobre, nombre, estandar, fuente, estado], i) => ({ id: `ej-urg-a${num}-${i + 1}`, que, porque, donde, plazo, fin, quien, como, tipo, clase, actuaSobre, indicador: { nombre, formula: "", estandar, fuente }, comprobacion: { especifica: true, factible: true, medible: true, sostenible: estado === "verificada", aceptable: true }, estado, nota: "" }));
+        const r = RESIDUAL_URG[num];
+        return { id: "ej-urg-f" + num, num, subprocesoId: subs[s].id, fallo, efecto, causa, controles: CONTROLES_URG[num] || "", g: String(g), o: String(o), d: String(d),
+          acciones: acc, residual: r ? { g: String(r[0]), o: String(r[1]), d: String(r[2]), fecha: "", nota: "Esperado cuando la acción esté implantada" } : { g: "", o: "", d: "", fecha: "", nota: "" } };
+      }),
       escalas: null,
-      notas: "Ejemplo basado en el Documento Final del Mapa de Riesgos de Urgencias. Los controles actuales no están en el caso original: se han añadido para el ejemplo en los 15 fallos de mayor IPR.",
+      conclusiones: "El AMFE ha permitido identificar de forma sistemática 49 fallos potenciales en los 7 subprocesos de la atención en Urgencias y priorizarlos según su gravedad, su ocurrencia y su detección. Los 15 fallos de mayor IPR (de 343 a 180) se concentran en el triaje, la identificación del paciente y la continuidad de la información clínica. Se han propuesto acciones de mejora con responsable, plazo e indicador para los 9 primeros; si funcionan como se espera, su IPR bajaría a menos de la mitad. Estas acciones servirán de base para una auditoría interna de seguimiento, y el AMFE se usará también en la acogida de los nuevos profesionales y en las sesiones de seguridad del paciente.",
+      control: {
+        elaborado: [{ nombre: "", cargo: "Coordinación de Calidad y Seguridad del Paciente" }, { nombre: "", cargo: "Técnicos de Calidad y Seguridad del Paciente" }],
+        revisado: [{ nombre: "", cargo: "Jefatura de Servicio de Urgencias" }],
+        aprobado: [{ nombre: "", cargo: "Gerencia del Área de Gestión Sanitaria" }],
+        historial: [{ edicion: "00", fecha: "2025-11-04", cambio: "Documento inicial" }]
+      },
+      proxRevision: "2026-11-04",
+      notas: "Ejemplo basado en el Documento Final del Mapa de Riesgos de Urgencias y en los ejercicios resueltos del curso. Se han añadido para el ejemplo los controles actuales de los 15 fallos de mayor IPR y, en las acciones, el indicador, el estándar, el estado, la fecha de fin y la puntuación esperada tras las acciones. Las acciones cubren los 9 fallos que trabajan los ejercicios; quedan 6 prioritarios sin acción para practicar.",
       creado: "2025-11-04T12:00:00.000Z", modificado: "2025-11-04T12:00:00.000Z"
     };
   }
@@ -285,7 +314,9 @@
       { t: "2 · El equipo", s: "10 perfiles y 3 sesiones de trabajo", href: "#/amfe/ej-amfe-urg/2" },
       { t: "4 · Los fallos", s: "49 fallos con su efecto y su causa", href: "#/amfe/ej-amfe-urg/4" },
       { t: "5 · La puntuación", s: "G·O·D e IPR: del 343 al 36", href: "#/amfe/ej-amfe-urg/5" },
-      { t: "6 · La priorización", s: "Los 15 de mayor IPR y la matriz de riesgos", href: "#/amfe/ej-amfe-urg/6" }
+      { t: "6 · La priorización", s: "Los 15 de mayor IPR y la matriz de riesgos", href: "#/amfe/ej-amfe-urg/6" },
+      { t: "7 · Las acciones", s: "9 acciones 5W1H con indicador y estándar", href: "#/amfe/ej-amfe-urg/7" },
+      { t: "8 · Cierre e informe", s: "IPR residual, conclusiones e informe en Word", href: "#/amfe/ej-amfe-urg/8" }
     ]
   };
 

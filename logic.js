@@ -2,9 +2,11 @@
 //  logic.js — Lógica PURA (sin DOM) · AMFE
 //  Modelo del AMFE (proceso, subprocesos, equipo, sesiones, fallos), escalas
 //  G·O·D, IPR y orden, priorización (N primeros o umbral, gravedad 9–10, fallo
-//  crítico, decisión manual), matriz de riesgos, avisos didácticos por paso,
-//  textos propuestos, progreso, pegar desde Excel, paquete de intercambio
-//  «amfe-fallos» para otras apps, hojas de Excel, saneado por esquema y fusión.
+//  crítico, decisión manual), matriz de riesgos, acciones de mejora 5W1H con
+//  indicador y estándar, IPR residual, control documental, avisos didácticos
+//  por paso, textos propuestos, progreso, pegar desde Excel, paquete de
+//  intercambio «amfe-fallos» para otras apps, documentos (informe y resumen,
+//  como lista de bloques para Word y PDF), hojas de Excel, saneado y fusión.
 //  window.Logica en navegador y module.exports en Node (tests).
 // ============================================================
 (function (raiz) {
@@ -23,6 +25,9 @@
   const corto = (s, n = 60) => { s = String(s || "").trim(); return s.length > n ? s.slice(0, n - 1) + "…" : s || "sin nombre"; };
   const normal = s => sinTildes(s).replace(/[^a-z0-9ñ ]/g, " ").replace(/\s+/g, " ").trim();
   const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
+  const listaY = l => l.length > 1 ? l.slice(0, -1).join(", ") + " y " + l[l.length - 1] : l.join("");
+  // «2026-01-12» → «12/01/2026» (los campos de fecha guardan el formato del calendario del navegador)
+  const fmtFecha = v => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(v || "").trim()); return m ? `${m[3]}/${m[2]}/${m[1]}` : String(v || ""); };
 
   // ---------- Escalas G·O·D (las del curso, en tramos de dos puntos) ----------
   const TRAMOS = ["1–2", "3–4", "5–6", "7–8", "9–10"];
@@ -135,7 +140,8 @@
   const COLORES_SUB = 8;   // número de colores de subproceso (styles.css: .sub-c0 … .sub-c7)
   function nuevoAmfe(id, fecha) {
     return { id, titulo: "", proceso: "", unidad: "", objetivo: "", inicio: "", fin: "", incluye: "", excluye: "", responsable: "", fecha: "",
-      subprocesos: [], equipo: [], sesiones: [], fallos: [], escalas: nuevasEscalas(), prioridad: nuevaPrioridad(), notas: "", creado: fecha, modificado: fecha };
+      subprocesos: [], equipo: [], sesiones: [], fallos: [], escalas: nuevasEscalas(), prioridad: nuevaPrioridad(),
+      introduccion: "", conclusiones: "", control: nuevoControl(), proxRevision: "", notas: "", creado: fecha, modificado: fecha };
   }
   // Criterio de prioridad: los N de mayor IPR (15, como el curso) o los que superan un umbral de IPR
   const nuevaPrioridad = () => ({ modo: "top", n: "15", umbral: "200" });
@@ -144,7 +150,12 @@
   function nuevoMiembro(id) { return { id, perfil: "", cargo: "", rol: "miembro", justificacion: "", nombre: "" }; }
   function nuevaSesion(id) { return { id, fecha: "", actividad: "", duracion: "", asistentes: [], resultados: "" }; }
   // manual: "" = lo decide el criterio; "si" / "no" = el equipo lo marca o lo desmarca a mano (con motivo)
-  function nuevoFallo(id, n = 0) { return { id, num: n, subprocesoId: "", fallo: "", efecto: "", causa: "", controles: "", g: "", o: "", d: "", critico: false, motivoCritico: "", manual: "", motivo: "" }; }
+  function nuevoFallo(id, n = 0) { return { id, num: n, subprocesoId: "", fallo: "", efecto: "", causa: "", controles: "", g: "", o: "", d: "", critico: false, motivoCritico: "", manual: "", motivo: "", acciones: [], residual: nuevoResidual() }; }
+  // Control del documento (como en el Documento Final): elaborado, revisado, aprobado e histórico de revisiones
+  function nuevaPersona() { return { nombre: "", cargo: "" }; }
+  function nuevoControl() { return { elaborado: [nuevaPersona()], revisado: [nuevaPersona()], aprobado: [nuevaPersona()], historial: [{ edicion: "00", fecha: "", cambio: "Documento inicial" }] }; }
+  // G·O·D esperados (o medidos) tras aplicar las acciones de mejora
+  function nuevoResidual() { return { g: "", o: "", d: "", fecha: "", nota: "" }; }
   const siguienteNum = a => a.fallos.reduce((m, f) => Math.max(m, Number(f.num) || 0), 0) + 1;
   // Color libre para un subproceso nuevo (el primero que no se use)
   function colorLibre(a) {
@@ -353,7 +364,121 @@
       return { id: s.id, nombre: s.nombre, color: s.color, n: l.length, prio: l.filter(f => m[f.id].prio).length, max: v.length ? Math.max(...v) : 0, media: v.length ? Math.round(v.reduce((x, y) => x + y, 0) / v.length) : 0 }; });
   }
 
-  function avisos(a) { return [...avisosProceso(a), ...avisosEquipo(a), ...avisosFallos(a), ...avisosPuntuar(a), ...avisosPriorizar(a)]; }
+  // ---------- Acciones de mejora (paso 7) ----------
+  const TIPOS_ACCION = {
+    correccion: { nom: "Corrección inmediata", que: "Arregla el fallo en el momento en que ocurre." },
+    correctora: { nom: "Acción correctora", que: "Elimina la causa para que el fallo no se repita." },
+    preventiva: { nom: "Acción preventiva", que: "Elimina un riesgo antes de que llegue a ocurrir." }
+  };
+  const CLASES_ACCION = { procedimiento: { nom: "Procedimiento o protocolo" }, formacion: { nom: "Formación" }, tecnologia: { nom: "Tecnología" }, organizativa: { nom: "Cambio organizativo" } };
+  const ACTUA = { o: "Baja la ocurrencia", d: "Mejora la detección", g: "Reduce la gravedad" };
+  // Criterios del tema 5 para que una acción sea efectiva
+  const COMPROBACION = {
+    especifica: { nom: "Específica", que: "Ataca la causa del fallo." },
+    factible: { nom: "Factible", que: "Es realista con los recursos disponibles." },
+    medible: { nom: "Medible", que: "Tiene un indicador para comprobar su efecto." },
+    sostenible: { nom: "Sostenible", que: "Se integra en el trabajo diario y se mantiene." },
+    aceptable: { nom: "Aceptable", que: "Cuenta con el apoyo del personal implicado." }
+  };
+  const ESTADOS_ACCION = { pendiente: "Pendiente", curso: "En curso", hecha: "Hecha", verificada: "Verificada" };
+  const ESTADOS_PLURAL = { pendiente: "pendientes", curso: "en curso", hecha: "hechas", verificada: "verificadas" };
+  const cuentaEstado = (k, n) => `${n} ${n === 1 ? ESTADOS_ACCION[k].toLowerCase() : ESTADOS_PLURAL[k]}`;
+  // Fuerza de la medida (misma lógica que Auditorías): lo que cambia el sistema es más fuerte que formar o recordar
+  const FUERZAS = {
+    fuerte: { nom: "Medida fuerte", que: "Cambia el sistema: obliga, automatiza o elimina el paso que falla." },
+    intermedia: { nom: "Medida intermedia", que: "Apoya la práctica: listas de verificación, doble verificación, estandarizar." },
+    debil: { nom: "Medida débil", que: "Depende de la memoria o la voluntad: formación, avisos, sensibilización." }
+  };
+  function fuerzaMedida(texto) {
+    const t = sinTildes(texto);
+    if (!t) return "";
+    if (/campo obligatori|no permit|\bbloque(e|ar|a)\b|forzad|automat|alerta autom|alerta visible|integracion|interoperab|redisen|eliminar|simplific|panel de camas|en tiempo real|sistema de alerta|checklist (digital )?obligatori|canal directo/.test(t)) return "fuerte";
+    if (/checklist|lista de verificacion|listado de control|doble (verificacion|validacion|identificacion|chequeo|revision)|protocolo|procedimiento|estandariz|auditori|revision (cruzada|semanal|periodica|sistematica)|reevaluacion|recordatorio visual|listado actualizado|circuito|reunion|etiquetado|designacion|cuestionario/.test(t)) return "intermedia";
+    if (/formacion|\bformar\b|sesion|sensibiliz|concienci|charla|informar|difundir|recordar|insistir|cartel|cuidado|curso/.test(t)) return "debil";
+    return "";
+  }
+  function nuevoIndicador() { return { nombre: "", formula: "", estandar: "", fuente: "" }; }
+  function nuevaComprobacion() { return { especifica: false, factible: false, medible: false, sostenible: false, aceptable: false }; }
+  function nuevaAccion(id) { return { id, que: "", porque: "", donde: "", plazo: "", fin: "", quien: "", como: "", tipo: "correctora", clase: "", actuaSobre: [], indicador: nuevoIndicador(), comprobacion: nuevaComprobacion(), estado: "pendiente", nota: "" }; }
+  const iprResidual = f => ipr(f.residual.g, f.residual.o, f.residual.d);
+  const vencida = (x, hoy) => /^\d{4}-\d{2}-\d{2}$/.test(x.fin || "") && x.fin < hoy && (x.estado === "pendiente" || x.estado === "curso");
+  const accionCompleta = x => lleno(x.que) && lleno(x.quien) && (lleno(x.plazo) || lleno(x.fin));
+  const accionesDe = f => f.acciones.filter(x => lleno(x.que));
+  function sugerirPorque(f) {
+    if (!lleno(f.efecto)) return "";
+    return `Para evitar este efecto: ${minuscula(f.efecto).replace(/[.;]$/, "")}${lleno(f.causa) ? `; actuando sobre su causa: ${minuscula(f.causa).replace(/[.;]$/, "")}` : ""}.`;
+  }
+  // Indicadores de la app Indicadores (su almacenamiento «indicadores-datos» o su copia .json). Se copian, no se enlazan.
+  function indicadoresDe(o) {
+    if (!o || typeof o !== "object" || !Array.isArray(o.indicadores)) return null;
+    const t = v => (typeof v === "string" || typeof v === "number") ? String(v).slice(0, 500) : "";
+    return o.indicadores.slice(0, 300).filter(x => x && typeof x === "object" && lleno(x.nombre)).map(x => {
+      const e = t(x.estandar).replace(/[^\d.,]/g, "");
+      return { nombre: t(x.nombre), formula: [t(x.numerador), t(x.denominador)].every(lleno) ? `${t(x.numerador)} / ${t(x.denominador)} × 100` : "",
+        estandar: e ? `${x.sentido === "menos" ? "≤" : "≥"} ${e} %` : "", fuente: [...(Array.isArray(x.fuentes) ? x.fuentes.map(t) : []), t(x.fuenteOtra)].filter(lleno).join(", ") };
+    });
+  }
+  function avisosMejorar(a, hoy) {
+    const A = [], PR = prioritarios(a);
+    if (!PR.length) { A.push({ nivel: "nota", texto: "Primero elige los fallos prioritarios (paso 6): las acciones de mejora se hacen para ellos." }); return A.map(x => Object.assign({ paso: 7 }, x)); }
+    const sinAcc = PR.filter(f => !accionesDe(f).length);
+    if (sinAcc.length) A.push({ nivel: "nota", texto: `${sinAcc.length === 1 ? "Un fallo prioritario no tiene" : sinAcc.length + " fallos prioritarios no tienen"} ninguna acción de mejora (nº ${sinAcc.map(f => f.num).join(", ")}).` });
+    PR.forEach(f => f.acciones.forEach((x, i) => {
+      const n = `Nº ${f.num}, acción ${i + 1}`, base = { fallo: f.id, accion: x.id };
+      if (!lleno(x.que)) { A.push(Object.assign({ nivel: "warn", texto: `${n}: describe qué se va a hacer.` }, base)); return; }
+      const falta = [!lleno(x.quien) && "responsable", !lleno(x.plazo) && !lleno(x.fin) && "plazo", !lleno(x.indicador.nombre) && "indicador"].filter(Boolean);
+      if (falta.length) A.push(Object.assign({ nivel: "warn", texto: `${n}: falta ${listaY(falta)}. Sin ${falta.length === 1 ? "eso" : "ellos"} no se puede hacer el seguimiento.` }, base));
+      if (lleno(x.indicador.nombre) && !lleno(x.indicador.estandar)) A.push(Object.assign({ nivel: "nota", texto: `${n}: el indicador no tiene estándar. ¿Qué valor consideraréis aceptable (por ejemplo, ≥ 95 %)?` }, base));
+      if (!x.actuaSobre.length) A.push(Object.assign({ nivel: "nota", texto: `${n}: marca sobre qué actúa (ocurrencia, detección o gravedad). Os servirá para volver a puntuar el fallo en el paso 8.` }, base));
+      if (vencida(x, hoy)) A.push(Object.assign({ nivel: "warn", texto: `${n}: el plazo terminó el ${fmtFecha(x.fin)} y la acción sigue ${ESTADOS_ACCION[x.estado].toLowerCase()}.` }, base));
+    }));
+    const todas = PR.flatMap(accionesDe), fz = todas.map(x => fuerzaMedida(x.que));
+    if (todas.length >= 3 && fz.every(z => z === "debil")) A.push({ nivel: "warn", texto: "Todas las acciones son de formación, avisos o sensibilización: medidas débiles, que dependen de la memoria y la buena voluntad. Añadid alguna que cambie el sistema (obligar, automatizar o eliminar el paso que falla)." });
+    else if (todas.length >= 3 && !fz.includes("fuerte")) A.push({ nivel: "nota", texto: "Ninguna acción es una medida fuerte (que obligue, automatice o elimine el paso que falla). Si es posible, combinad las medidas intermedias con alguna fuerte." });
+    return A.map(x => Object.assign({ paso: 7 }, x));
+  }
+
+  // ---------- Reevaluar y cerrar (paso 8) ----------
+  const conAcciones = a => prioritarios(a).filter(f => accionesDe(f).length);
+  function avisosCerrar(a) {
+    const A = [], F = conAcciones(a), pend = [];
+    if (!F.length) A.push({ nivel: "nota", texto: "Primero define las acciones de mejora de los fallos prioritarios (paso 7)." });
+    F.forEach(f => {
+      const r = f.residual, v0 = iprDe(f), v1 = iprResidual(f);
+      if (![r.g, r.o, r.d].some(lleno)) { pend.push(f); return; }
+      if (!v1) { A.push({ nivel: "error", fallo: f.id, texto: `Nº ${f.num}: G, O y D tras las acciones tienen que ser enteros del 1 al 10.` }); return; }
+      if (v0 && v1 >= v0) A.push({ nivel: "warn", fallo: f.id, texto: `Nº ${f.num}: el IPR tras las acciones (${v1}) no baja del inicial (${v0}). Así las acciones no reducen el riesgo: revisadlas.` });
+      if (entero1a10(r.g) < entero1a10(f.g) && !lleno(r.nota)) A.push({ nivel: "warn", fallo: f.id, texto: `Nº ${f.num}: la gravedad baja de ${f.g} a ${r.g}. Es raro: una acción suele bajar la ocurrencia o mejorar la detección, pero el daño posible casi nunca cambia si no se cambia el proceso. Explica por qué en la nota.` });
+      const act = new Set(f.acciones.flatMap(x => x.actuaSobre));
+      ["o", "d"].forEach(k => { if (entero1a10(r[k]) < entero1a10(f[k]) && !act.has(k)) A.push({ nivel: "nota", fallo: f.id, texto: `Nº ${f.num}: baja la ${ESCALA_NOM[k].toLowerCase()} (de ${f[k]} a ${r[k]}), pero ninguna acción dice actuar sobre ella. Revisa el paso 7.` }); });
+    });
+    if (pend.length) A.push({ nivel: "nota", texto: `Falta volver a puntuar ${pend.length === 1 ? "un fallo" : pend.length + " fallos"} con acciones (nº ${pend.map(f => f.num).join(", ")}): ¿cómo quedarían G, O y D cuando las acciones funcionen?` });
+    if (F.length && !lleno(a.conclusiones)) A.push({ nivel: "nota", texto: "Escribe las conclusiones del AMFE (la app propone un texto con las cifras)." });
+    if (!a.control.aprobado.some(p => lleno(p.nombre) || lleno(p.cargo))) A.push({ nivel: "nota", texto: "Indica quién aprueba el documento en el control del documento." });
+    if (!lleno(a.proxRevision)) A.push({ nivel: "nota", texto: "Fija la fecha de la próxima revisión. Los riesgos cambian con el tiempo, con las acciones y con los incidentes: el AMFE se revisa periódicamente." });
+    return A.map(x => Object.assign({ paso: 8 }, x));
+  }
+  function resumenMejora(a, hoy) {
+    const PR = prioritarios(a), AC = PR.flatMap(accionesDe), F = conAcciones(a), R = F.filter(iprResidual);
+    const porEstado = Object.keys(ESTADOS_ACCION).reduce((o, k) => (o[k] = AC.filter(x => x.estado === k).length, o), {});
+    const ini = R.reduce((s, f) => s + iprDe(f), 0), fin = R.reduce((s, f) => s + iprResidual(f), 0);
+    return { prioritarios: PR.length, conAccion: F.length, acciones: AC.length, porEstado, vencidas: AC.filter(x => vencida(x, hoy)).length,
+      reevaluados: R.length, iprInicial: ini, iprResidual: fin, reduccion: ini ? Math.round((1 - fin / ini) * 100) : null };
+  }
+  function conclusionesSugeridas(a) {
+    const r = resumen(a), PR = prioritarios(a), F = a.fallos.filter(f => lleno(f.fallo) && iprDe(f)), m = resumenMejora(a, "");
+    if (!r.n) return "";
+    const vals = F.map(iprDe), crit = PR.filter(f => f.critico).length;
+    const sub = porSubproceso(a).filter(s => s.prio).sort((x, y) => y.prio - x.prio || y.max - x.max)[0];
+    const partes = [`El AMFE del proceso «${a.proceso || a.titulo || "analizado"}» ha identificado ${plural(r.n, "fallo potencial", "fallos potenciales")} en ${plural(r.subprocesos, "subproceso", "subprocesos")}${vals.length ? `, con un IPR entre ${Math.min(...vals)} y ${Math.max(...vals)}` : ""}.`];
+    if (PR.length) partes.push(`Se han priorizado ${plural(PR.length, "fallo", "fallos")} (${a.prioridad.modo === "umbral" ? `IPR igual o mayor que ${umbralPrioridad(a)}` : `los ${nPrioridad(a)} de mayor IPR`}${crit ? `, más ${plural(crit, "fallo crítico", "fallos críticos")}` : ""})${sub ? `, que se concentran sobre todo en «${sub.nombre}» (${sub.prio})` : ""}.`);
+    if (m.acciones) partes.push(`Para ellos se han propuesto ${plural(m.acciones, "acción de mejora", "acciones de mejora")}, con responsable, plazo e indicador de seguimiento.`);
+    if (m.reevaluados && m.reduccion !== null) partes.push(`Si las acciones funcionan como se espera, el IPR de los ${plural(m.reevaluados, "fallo reevaluado", "fallos reevaluados")} bajaría en conjunto de ${m.iprInicial} a ${m.iprResidual} (un ${m.reduccion} % menos).`);
+    partes.push(`Las acciones se comprobarán con sus indicadores y, cuando proceda, con una auditoría. El AMFE se revisará ${lleno(a.proxRevision) ? "el " + fmtFecha(a.proxRevision) : "periódicamente"}, o antes si cambia el proceso o se produce un incidente relacionado.`);
+    return partes.join(" ");
+  }
+
+  function avisos(a, hoy = "") { return [...avisosProceso(a), ...avisosEquipo(a), ...avisosFallos(a), ...avisosPuntuar(a), ...avisosPriorizar(a), ...avisosMejorar(a, hoy), ...avisosCerrar(a)]; }
 
   // ---------- Resumen y progreso ----------
   function resumen(a) {
@@ -372,7 +497,8 @@
       4: F.length >= 1 && F.every(f => subDe(a, f)),
       5: F.length >= 1 && F.every(f => iprDe(f)),
       6: F.length >= 1 && F.every(f => iprDe(f)) && prioritarios(a).length >= 1 && !avisosPriorizar(a).some(x => x.nivel === "warn" && x.fallo && /motivo/.test(x.texto)),
-      7: false, 8: false
+      7: prioritarios(a).length >= 1 && prioritarios(a).every(f => accionesDe(f).length && accionesDe(f).every(accionCompleta)),
+      8: conAcciones(a).length >= 1 && conAcciones(a).every(f => iprResidual(f)) && lleno(a.conclusiones)
     };
   }
   // Primer paso disponible sin terminar (o el último disponible si todo está hecho)
@@ -386,7 +512,9 @@
     2: () => "Forma el equipo del AMFE (al menos 6 perfiles distintos) y planifica las sesiones.",
     4: a => a.fallos.length ? "Completa los fallos: cada uno en su subproceso, con su efecto, su causa y los controles actuales." : "Escribe los fallos de cada subproceso: ¿qué puede salir mal en cada paso?",
     5: a => { const n = a.fallos.filter(f => lleno(f.fallo) && !iprDe(f)).length; return `Puntúa la gravedad, la ocurrencia y la detección de ${n === 1 ? "el fallo que queda" : "los " + n + " fallos que quedan"}.`; },
-    6: a => prioritarios(a).length ? "Revisa los fallos prioritarios: escribe el motivo de los que habéis marcado o desmarcado a mano y de los críticos." : "Elige los fallos prioritarios: los de mayor IPR, los muy graves y los críticos. Mira la matriz de riesgos."
+    6: a => prioritarios(a).length ? "Revisa los fallos prioritarios: escribe el motivo de los que habéis marcado o desmarcado a mano y de los críticos." : "Elige los fallos prioritarios: los de mayor IPR, los muy graves y los críticos. Mira la matriz de riesgos.",
+    7: a => { const n = prioritarios(a).filter(f => !accionesDe(f).length).length; return n ? `Propón acciones de mejora para ${n === 1 ? "el fallo prioritario que queda" : "los " + n + " fallos prioritarios que quedan"}: qué, por qué, dónde, cuándo, quién y cómo.` : "Completa las acciones de mejora: cada una con su responsable, su plazo y su indicador."; },
+    8: a => conAcciones(a).some(f => !iprResidual(f)) ? "Vuelve a puntuar los fallos con acciones: ¿cómo quedarían G, O y D cuando las acciones funcionen?" : "Escribe las conclusiones y el control del documento, y descarga el informe AMFE."
   };
   function siguientePaso(datos, entrega) {
     const L = datos.amfes;
@@ -394,7 +522,7 @@
     const a = L.slice().sort((x, y) => String(y.modificado).localeCompare(String(x.modificado)))[0];
     const p = pasoPendiente(a, entrega), nom = corto(a.titulo || a.proceso || "tu AMFE", 50);
     if (p) return { k: "paso" + p.n, texto: `«${nom}»: ${TEXTO_PASO[p.n](a)}`, href: `#/amfe/${a.id}/${p.n}`, btn: `Ir al paso ${p.n}` };
-    return { k: "listo", texto: `«${nom}» tiene ${plural(prioritarios(a).length, "fallo prioritario", "fallos prioritarios")}. Las acciones de mejora llegan en la próxima versión; mientras, puedes sacar el Excel con la tabla, los prioritarios y la matriz.`, href: `#/amfe/${a.id}/6`, btn: "Ver la priorización" };
+    return { k: "listo", texto: `«${nom}» está completo. Descarga el informe AMFE en Word o PDF, haz el seguimiento de las acciones y fija la próxima revisión.`, href: `#/amfe/${a.id}/8`, btn: "Ir al informe" };
   }
 
   // ---------- Pegar una tabla desde Excel/Calc/Word ----------
@@ -468,7 +596,9 @@
             return { id: f.id, num: f.num, subprocesoId: f.subprocesoId, subproceso: nombreSub(a, f), fallo: f.fallo, efecto: f.efecto, causa: f.causa, controles: f.controles,
               g: numONull(f.g), o: numONull(f.o), d: numONull(f.d), ipr: iprDe(f), puesto: P[f.id] || null,
               prioritario: e.prio, motivoPrioridad: !e.prio ? null : e.por === "criterio" ? modo : e.por, motivo: f.critico ? f.motivoCritico : f.motivo,
-              critico: f.critico, grave: e.grave, zona: e.zona, acciones: [], residual: null };
+              critico: f.critico, grave: e.grave, zona: e.zona,
+              acciones: accionesDe(f).map(x => ({ que: x.que, porque: x.porque, donde: x.donde, plazo: x.plazo, fin: x.fin, quien: x.quien, como: x.como, tipo: x.tipo, clase: x.clase, fuerza: fuerzaMedida(x.que) || null, actuaSobre: x.actuaSobre.slice(), indicador: Object.assign({}, x.indicador), estado: x.estado })),
+              residual: iprResidual(f) ? { g: numONull(f.residual.g), o: numONull(f.residual.o), d: numONull(f.residual.d), ipr: iprResidual(f) } : null };
           })
         };
       })
@@ -478,6 +608,98 @@
   function leerIntercambio(o) {
     if (!o || typeof o !== "object" || o.formato !== FORMATO_INTERCAMBIO || o.version !== VERSION_INTERCAMBIO || !Array.isArray(o.amfes)) return null;
     return o.amfes.filter(x => x && typeof x === "object" && Array.isArray(x.fallos));
+  }
+
+  // ---------- Documentos (bloques que docx.js convierte en Word y app.js en HTML para imprimir/PDF) ----------
+  // Bloques: {t:"portada"}, {t:"h1"|"h2", texto}, {t:"p", texto|runs, estilo}, {t:"lista", items}, {t:"tabla", cab, filas, anchos, fuente}, {t:"salto"}
+  const FONDO_NIVEL = { muyalto: "FFE4E6", alto: "FFEDD5", medio: "FEF3C7", bajo: "DCFCE7" };
+  const FONDO_ZONA = { verde: "BBF7D0", amarillo: "FEF08A", naranja: "FED7AA", rojo: "FCA5A5" };
+  const celdaIpr = v => v ? { texto: String(v), centro: true, negrita: true, fondo: FONDO_NIVEL[nivelIPR(v).k] } : { texto: "", centro: true };
+  const C_ = t => ({ texto: t == null ? "" : String(t), centro: true });
+  function bloquesControl(control) {
+    const filas = [];
+    [["Elaborado", control.elaborado], ["Revisado", control.revisado], ["Aprobado", control.aprobado]].forEach(([k, ps]) => {
+      const v = ps.filter(x => lleno(x.nombre) || lleno(x.cargo));
+      (v.length ? v : [nuevaPersona()]).forEach((x, i) => filas.push([{ texto: i === 0 ? k : "", negrita: true, fondo: "FDF3EC" }, x.nombre || " ", x.cargo || " "]));
+    });
+    return [{ t: "tabla", cab: ["", "Nombre", "Cargo"], filas, anchos: [18, 41, 41] }, { t: "h2", texto: "Histórico de revisiones" },
+      { t: "tabla", cab: ["Edición", "Fecha", "Cambio"], filas: control.historial.filter(h => lleno(h.edicion) || lleno(h.cambio)).map(h => [h.edicion, fmtFecha(h.fecha), h.cambio]), anchos: [14, 22, 64] }];
+  }
+  function bloqueMatriz(a, fallos, tam) {
+    const etq = i => tam === 10 ? String(i) : TRAMOS[i - 1];
+    return { t: "tabla", fuente: 8, cab: ["G \\ O", ...Array.from({ length: tam }, (_, i) => etq(i + 1))], anchos: [12, ...Array(tam).fill(88 / tam)],
+      filas: matriz(fallos, tam).map(fila => [{ texto: etq(fila[0].g), negrita: true, centro: true }, ...fila.map(cl => ({ texto: cl.fallos.map(f => f.num).join(", "), centro: true, negrita: true, fondo: FONDO_ZONA[cl.zona] }))]) };
+  }
+  const textoMotivo = (a, f, e) => e.por === "critico" ? "Fallo crítico. " + f.motivoCritico : e.por === "manual" ? "Decisión del equipo. " + f.motivo : (a.prioridad.modo === "umbral" ? `IPR ≥ ${umbralPrioridad(a)}` : `Entre los ${nPrioridad(a)} de mayor IPR`);
+  function introduccionSugerida(a) {
+    return `La gestión proactiva de la seguridad del paciente exige identificar de forma sistemática los riesgos de los procesos asistenciales antes de que causen daño. Este documento recoge el Análisis Modal de Fallos y Efectos (AMFE) del proceso «${a.proceso || a.titulo || ""}»${lleno(a.unidad) ? ` en ${a.unidad}` : ""}: la delimitación del proceso y sus subprocesos, el equipo que lo ha realizado, los fallos potenciales con sus efectos y causas, su priorización mediante el Índice de Prioridad de Riesgo (IPR = gravedad × ocurrencia × detección) y la matriz de riesgos, las acciones de mejora propuestas para los fallos prioritarios y la reevaluación del riesgo esperado tras aplicarlas. La metodología es reproducible y adaptable a cualquier otro proceso clínico o de soporte.`;
+  }
+  function documentoInforme(a, fecha, tam = 10) {
+    const B = [], r = resumen(a), m = prioridad(a), PR = prioritarios(a), P = puestos(a.fallos), nom = a.proceso || a.titulo || "Proceso sin nombre";
+    const F = ordenarFallos(a.fallos.filter(f => lleno(f.fallo)), "sub", a.subprocesos);
+    B.push({ t: "portada", titulo: "Análisis Modal de Fallos y Efectos (AMFE)", sub: nom, extra: [a.unidad, a.fecha || fecha, lleno(a.responsable) ? "Responsable: " + a.responsable : ""].filter(lleno) });
+    B.push({ t: "h1", texto: "Control del documento" }, ...bloquesControl(a.control));
+    B.push({ t: "salto" });
+    B.push({ t: "h1", texto: "1. Introducción" }, { t: "p", texto: lleno(a.introduccion) ? a.introduccion : introduccionSugerida(a) });
+    B.push({ t: "h1", texto: "2. Descripción del proceso" });
+    if (lleno(a.objetivo)) B.push({ t: "p", runs: [{ texto: "Objetivo del proceso. ", negrita: true }, { texto: a.objetivo }] });
+    const datos = [["Empieza", a.inicio], ["Termina", a.fin], ["Qué queda dentro", a.incluye], ["Qué queda fuera", a.excluye]].filter(x => lleno(x[1]));
+    if (datos.length) B.push({ t: "tabla", sinCab: true, anchos: [26, 74], filas: datos.map(([k, v]) => [{ texto: k, negrita: true, fondo: "FDF3EC" }, v]) });
+    if (a.subprocesos.length) { B.push({ t: "h2", texto: "2.1. Subprocesos" }, { t: "tabla", fuente: 8, cab: ["Nº", "Subproceso", "Descripción", "Inicio", "Fin", "Roles"], anchos: [5, 19, 25, 17, 17, 17], filas: a.subprocesos.map((s, i) => [C_(i + 1), { texto: s.nombre, negrita: true }, s.descripcion, s.inicio, s.fin, s.roles]) }); }
+    B.push({ t: "h1", texto: "3. Equipo y metodología" });
+    if (a.equipo.length) { B.push({ t: "h2", texto: "3.1. Equipo de trabajo" }, { t: "tabla", fuente: 8, cab: ["Nº", "Perfil profesional", "Cargo", "Papel", "Justificación"], anchos: [5, 22, 20, 15, 38], filas: a.equipo.map((x, i) => [C_(i + 1), { texto: x.perfil + (lleno(x.nombre) ? "\n" + x.nombre : ""), negrita: true }, x.cargo, ROLES[x.rol].nom, x.justificacion]) }); }
+    B.push({ t: "h2", texto: "3.2. Metodología" }, { t: "p", texto: "Los fallos se identificaron en grupo, subproceso a subproceso (lluvia de ideas y técnica de grupo nominal). Para cada fallo se describieron su efecto, su causa y los controles que ya existen, y se puntuaron de 1 a 10 la gravedad (G), la ocurrencia (O) y la detección (D) con las escalas del Anexo I. El Índice de Prioridad de Riesgo es IPR = G × O × D (de 1 a 1.000)." });
+    if (a.sesiones.length) B.push({ t: "tabla", fuente: 8, cab: ["Sesión", "Fecha", "Actividad principal", "Duración", "Resultados"], anchos: [9, 13, 33, 10, 35], filas: a.sesiones.map((x, i) => [C_(i + 1), C_(fmtFecha(x.fecha)), x.actividad, C_(x.duracion), x.resultados]) });
+    B.push({ t: "h1", texto: "4. Resultados del análisis" });
+    const vals = F.map(iprDe).filter(Boolean);
+    B.push({ t: "p", texto: `Se identificaron ${plural(r.n, "fallo potencial", "fallos potenciales")} en ${plural(r.subprocesos, "subproceso", "subprocesos")}${vals.length ? `, con un IPR entre ${Math.min(...vals)} y ${Math.max(...vals)}` : ""}. Se consideran prioritarios ${PR.length === 1 ? "el fallo" : "los " + PR.length + " fallos"} ${a.prioridad.modo === "umbral" ? `con IPR igual o mayor que ${umbralPrioridad(a)}` : `de mayor IPR (los ${nPrioridad(a)} primeros)`}${PR.some(f => f.critico) ? ", más los marcados como críticos" : ""}${PR.some(f => f.manual === "si") ? " y los añadidos por el equipo" : ""}. El listado completo está en el Anexo II.` });
+    if (PR.length) {
+      B.push({ t: "h2", texto: "4.1. Fallos prioritarios" }, { t: "tabla", fuente: 8, cab: ["Puesto", "Nº", "Subproceso", "Modo de fallo", "Efecto", "Causa", "G", "O", "D", "IPR", "Motivo"], anchos: [8, 4, 12, 17, 15, 15, 3, 3, 3, 6, 14],
+        filas: PR.map(f => [C_(P[f.id] || ""), C_(f.num), nombreSub(a, f), { texto: f.fallo, negrita: true }, f.efecto, f.causa, C_(f.g), C_(f.o), C_(f.d), celdaIpr(iprDe(f)), textoMotivo(a, f, m[f.id])]) });
+      const graves = a.fallos.filter(f => m[f.id] && m[f.id].grave);
+      if (graves.length) B.push({ t: "p", estilo: "nota", texto: `Fallos con gravedad 9–10: nº ${graves.map(f => f.num).join(", ")}.` });
+      B.push({ t: "h2", texto: "4.2. Matriz de riesgos" }, { t: "p", texto: "Cada fallo prioritario se sitúa según su gravedad (filas) y su ocurrencia (columnas). Zonas: verde, riesgo bajo (aceptable); amarillo, moderado (vigilar); naranja, alto (intervenir); rojo, muy alto (intervenir de inmediato). La matriz no tiene en cuenta la detección: complementa al IPR, no lo sustituye." }, bloqueMatriz(a, PR, tam));
+      B.push({ t: "h2", texto: "4.3. Priorización por subprocesos" }, { t: "tabla", fuente: 8, cab: ["Subproceso", "Fallos", "Prioritarios", "IPR máximo", "IPR medio"], anchos: [44, 14, 14, 14, 14], filas: porSubproceso(a).filter(s => s.n).map(s => [s.nombre, C_(s.n), { texto: String(s.prio), centro: true, negrita: true }, celdaIpr(s.max), C_(s.media || "")]) });
+    }
+    const CA = conAcciones(a);
+    B.push({ t: "h1", texto: "5. Acciones de mejora" });
+    if (!CA.length) B.push({ t: "p", texto: "Pendiente de definir las acciones de mejora de los fallos prioritarios." });
+    else {
+      B.push({ t: "p", texto: "Para cada fallo prioritario se proponen acciones que eliminen su causa, reduzcan su probabilidad o mejoren su detección. Cada acción se define con el modelo 5W1H (qué, por qué, dónde, cuándo, quién y cómo) y un indicador con su estándar para el seguimiento. Criterios: específicas, factibles, medibles, sostenibles y aceptables para el equipo." });
+      B.push({ t: "h2", texto: "5.1. Acciones propuestas (5W1H)" }, { t: "tabla", fuente: 8, cab: ["Nº", "Modo de fallo", "Qué", "Por qué", "Dónde", "Cuándo", "Quién", "Cómo"], anchos: [4, 14, 17, 14, 10, 9, 12, 20],
+        filas: CA.flatMap(f => accionesDe(f).map((x, i) => [C_(i ? "" : f.num), i ? "" : { texto: f.fallo, negrita: true }, { texto: x.que, negrita: true }, x.porque, x.donde, [x.plazo, fmtFecha(x.fin)].filter(lleno).join("\n"), x.quien, x.como])) });
+      B.push({ t: "h2", texto: "5.2. Indicadores y seguimiento" }, { t: "tabla", fuente: 8, cab: ["Nº", "Acción", "Tipo", "Fuerza", "Indicador", "Estándar", "Fuente", "Estado"], anchos: [4, 22, 13, 10, 22, 9, 11, 9],
+        filas: CA.flatMap(f => accionesDe(f).map(x => [C_(f.num), x.que, [TIPOS_ACCION[x.tipo] ? TIPOS_ACCION[x.tipo].nom : "", CLASES_ACCION[x.clase] ? CLASES_ACCION[x.clase].nom : ""].filter(lleno).join("\n"), FUERZAS[fuerzaMedida(x.que)] ? FUERZAS[fuerzaMedida(x.que)].nom.replace("Medida ", "") : "", x.indicador.nombre + (lleno(x.indicador.formula) ? "\n" + x.indicador.formula : ""), C_(x.indicador.estandar), x.indicador.fuente, C_(ESTADOS_ACCION[x.estado])])) });
+      const R = CA.filter(iprResidual);
+      B.push({ t: "h1", texto: "6. Reevaluación del riesgo" });
+      if (R.length) {
+        const mm = resumenMejora(a, "");
+        B.push({ t: "p", texto: `Puntuación esperada de cada fallo cuando las acciones estén implantadas (IPR residual). En conjunto, el IPR de los ${plural(R.length, "fallo reevaluado", "fallos reevaluados")} pasaría de ${mm.iprInicial} a ${mm.iprResidual} (un ${mm.reduccion} % menos).` },
+          { t: "tabla", fuente: 8, cab: ["Nº", "Modo de fallo", "G·O·D inicial", "IPR inicial", "G·O·D tras acciones", "IPR residual", "Reducción", "Nota"], anchos: [4, 26, 11, 9, 12, 9, 9, 20],
+            filas: R.map(f => { const v0 = iprDe(f), v1 = iprResidual(f); return [C_(f.num), { texto: f.fallo, negrita: true }, C_(`${f.g} · ${f.o} · ${f.d}`), celdaIpr(v0), C_(`${f.residual.g} · ${f.residual.o} · ${f.residual.d}`), celdaIpr(v1), C_(Math.round((1 - v1 / v0) * 100) + " %"), [f.residual.nota, lleno(f.residual.fecha) ? "(" + fmtFecha(f.residual.fecha) + ")" : ""].filter(lleno).join(" ")]; }) });
+      } else B.push({ t: "p", texto: "Pendiente de volver a puntuar los fallos tras las acciones." });
+    }
+    B.push({ t: "h1", texto: `${CA.length ? 7 : 6}. Conclusiones` }, { t: "p", texto: lleno(a.conclusiones) ? a.conclusiones : conclusionesSugeridas(a) });
+    if (lleno(a.proxRevision)) B.push({ t: "p", runs: [{ texto: "Próxima revisión del AMFE: ", negrita: true }, { texto: fmtFecha(a.proxRevision) }] });
+    B.push({ t: "salto" }, { t: "h1", texto: "Anexo I. Escalas de puntuación" }, { t: "tabla", fuente: 8, cab: ["Puntos", "Gravedad", "Ocurrencia", "Detección"], anchos: [10, 30, 30, 30], filas: TRAMOS.map((t, i) => [{ texto: t, centro: true, negrita: true }, a.escalas.g[i], a.escalas.o[i], a.escalas.d[i]]) },
+      { t: "p", estilo: "nota", texto: "La detección va al revés que las otras dos escalas: 1 = el fallo se detecta casi seguro antes de causar daño; 10 = casi imposible de detectar." });
+    B.push({ t: "h1", texto: "Anexo II. Fallos analizados" }, { t: "h2", texto: "Por subproceso" }, { t: "tabla", fuente: 7, cab: ["Nº", "Subproceso", "Modo de fallo", "Efecto", "Causa", "Controles actuales", "G", "O", "D", "IPR"], anchos: [4, 12, 18, 16, 16, 16, 3, 3, 3, 9],
+      filas: F.map(f => [C_(f.num), nombreSub(a, f), { texto: f.fallo, negrita: true }, f.efecto, f.causa, f.controles, C_(f.g), C_(f.o), C_(f.d), celdaIpr(iprDe(f))]) });
+    const O = ordenarFallos(F.filter(iprDe));
+    if (O.length) B.push({ t: "h2", texto: "Ordenados por IPR" }, { t: "tabla", fuente: 7, cab: ["Puesto", "Nº", "Subproceso", "Modo de fallo", "G", "O", "D", "IPR", "Prioritario"], anchos: [7, 4, 20, 39, 4, 4, 4, 8, 10], filas: O.map(f => [C_(P[f.id]), C_(f.num), nombreSub(a, f), f.fallo, C_(f.g), C_(f.o), C_(f.d), celdaIpr(iprDe(f)), C_(m[f.id].prio ? "★" : "")]) });
+    if (lleno(a.notas)) B.push({ t: "p", estilo: "nota", texto: a.notas });
+    return { titulo: "AMFE · " + nom, bloques: B };
+  }
+  // Resumen para la Dirección: una página con las cifras, los primeros riesgos y sus acciones
+  function documentoResumen(a, fecha) {
+    const B = [], r = resumen(a), PR = prioritarios(a), mm = resumenMejora(a, ""), nom = a.proceso || a.titulo || "Proceso sin nombre";
+    B.push({ t: "portada", titulo: "AMFE · Resumen para la Dirección", sub: nom, extra: [a.unidad, a.fecha || fecha].filter(lleno) });
+    B.push({ t: "h1", texto: "En cifras" }, { t: "lista", items: [`${plural(r.n, "fallo potencial analizado", "fallos potenciales analizados")} en ${plural(r.subprocesos, "subproceso", "subprocesos")}, por un equipo de ${plural(r.equipo, "perfil", "perfiles")}.`, `IPR máximo: ${r.maxIPR || "—"}. ${plural(PR.length, "fallo prioritario", "fallos prioritarios")}${PR.some(f => f.critico) ? ` (${PR.filter(f => f.critico).length} críticos)` : ""}.`, `${plural(mm.acciones, "acción de mejora propuesta", "acciones de mejora propuestas")}: ${Object.keys(ESTADOS_ACCION).filter(k => mm.porEstado[k]).map(k => cuentaEstado(k, mm.porEstado[k])).join(", ") || "ninguna todavía"}.`, ...(mm.reevaluados ? [`Reducción esperada del riesgo en los fallos reevaluados: ${mm.reduccion} % (IPR de ${mm.iprInicial} a ${mm.iprResidual}).`] : [])] });
+    const top = PR.slice(0, 5);
+    if (top.length) B.push({ t: "h1", texto: "Los riesgos más importantes y qué se va a hacer" }, { t: "tabla", fuente: 8, cab: ["Nº", "Riesgo", "IPR", "Acción principal", "Responsable", "Plazo"], anchos: [5, 27, 8, 32, 15, 13],
+      filas: top.map(f => { const x = accionesDe(f)[0]; return [C_(f.num), { texto: f.fallo, negrita: true }, celdaIpr(iprDe(f)), x ? x.que : "Pendiente", x ? x.quien : "", x ? [x.plazo, fmtFecha(x.fin)].filter(lleno).join(" · ") : ""]; }) });
+    B.push({ t: "h1", texto: "Conclusión" }, { t: "p", texto: lleno(a.conclusiones) ? a.conclusiones : conclusionesSugeridas(a) });
+    return { titulo: "AMFE · Resumen · " + nom, bloques: B };
   }
 
   // ---------- Excel ----------
@@ -528,7 +750,14 @@
     const h5 = cabecera("Equipo y sesiones · " + nom, ["Nº", "Perfil", "Cargo", "Papel", "Justificación", "Nombre"]);
     a.equipo.forEach((x, i) => h5.push([T(i + 1, "centro"), T(x.perfil, "negrita"), T(x.cargo), T(ROLES[x.rol].nom), T(x.justificacion), T(x.nombre)]));
     if (a.sesiones.length) { h5.push([]); h5.push(["Sesión", "Fecha", "Actividad", "Duración", "Asistentes", "Resultados"].map(x => T(x, "cab"))); a.sesiones.forEach((x, i) => h5.push([T(i + 1, "centro"), T(/^\d{4}-\d{2}-\d{2}$/.test(x.fecha) ? x.fecha.split("-").reverse().join("/") : x.fecha, "centro"), T(x.actividad), T(x.duracion, "centro"), T(x.asistentes.length, "centro"), T(x.resultados)])); }
-    // 6. Escalas
+    // 6. Acciones de mejora
+    const c7 = ["Nº fallo", "Modo de fallo", "IPR", "Acción", "Qué", "Por qué", "Dónde", "Plazo", "Fecha fin", "Responsable", "Cómo", "Tipo", "Clase", "Fuerza", "Actúa sobre", "Indicador", "Fórmula", "Estándar", "Fuente", "Estado", "Nota"];
+    const h7 = cabecera("Acciones de mejora · " + nom, c7);
+    conAcciones(a).forEach(f => accionesDe(f).forEach((x, i) => h7.push([T(f.num, "centro"), T(f.fallo, "negrita"), iprCelda(f), T(i + 1, "centro"), T(x.que, "negrita"), T(x.porque), T(x.donde), T(x.plazo), T(fmtFecha(x.fin), "centro"), T(x.quien), T(x.como), T(TIPOS_ACCION[x.tipo] ? TIPOS_ACCION[x.tipo].nom : ""), T(CLASES_ACCION[x.clase] ? CLASES_ACCION[x.clase].nom : ""), T(FUERZAS[fuerzaMedida(x.que)] ? FUERZAS[fuerzaMedida(x.que)].nom : ""), T(x.actuaSobre.map(k => ACTUA[k]).join(", ")), T(x.indicador.nombre), T(x.indicador.formula), T(x.indicador.estandar, "centro"), T(x.indicador.fuente), T(ESTADOS_ACCION[x.estado], "centro"), T(x.nota)])));
+    // 7. Reevaluación
+    const h8 = cabecera("Reevaluación (IPR residual) · " + nom, ["Nº", "Modo de fallo", "G", "O", "D", "IPR inicial", "G tras", "O tras", "D tras", "IPR residual", "Reducción %", "Nota"]);
+    conAcciones(a).filter(iprResidual).forEach(f => { const v0 = iprDe(f), v1 = iprResidual(f); h8.push([T(f.num, "centro"), T(f.fallo, "negrita"), T(f.g, "centro"), T(f.o, "centro"), T(f.d, "centro"), iprCelda(f), T(f.residual.g, "centro"), T(f.residual.o, "centro"), T(f.residual.d, "centro"), { numero: v1, estilo: nivelIPR(v1).k }, { numero: Math.round((1 - v1 / v0) * 100), estilo: "centro" }, T(f.residual.nota)]); });
+    // 8. Escalas
     const h6 = cabecera("Escalas de puntuación", ["Puntos", "Gravedad", "Ocurrencia", "Detección"]);
     TRAMOS.forEach((t, i) => h6.push([T(t, "centro"), T(a.escalas.g[i]), T(a.escalas.o[i]), T(a.escalas.d[i])]));
     h6.push([]); h6.push([T("IPR = Gravedad × Ocurrencia × Detección (de 1 a 1.000). La detección va al revés: 10 = casi imposible de detectar.", "sub")]);
@@ -538,6 +767,8 @@
       { nombre: "Matriz", filas: h3, opciones: { anchoColumnas: [7, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11], altoFilas: Object.fromEntries(Array.from({ length: 10 }, (_, i) => [i + 3, 30])) } },
       { nombre: "Subprocesos", filas: h4, opciones: { anchoColumnas: [5, 28, 34, 26, 26, 30, 8, 11, 10, 10], congelar: { filas: 3, columnas: 0 } } },
       { nombre: "Equipo y sesiones", filas: h5, opciones: { anchoColumnas: [7, 32, 30, 22, 50, 22] } },
+      { nombre: "Acciones", filas: h7, opciones: { anchoColumnas: [8, 30, 7, 7, 34, 30, 18, 12, 11, 20, 34, 18, 18, 16, 22, 32, 28, 10, 18, 11, 24], congelar: { filas: 3, columnas: 0 } } },
+      { nombre: "Reevaluación", filas: h8, opciones: { anchoColumnas: [6, 36, 5, 5, 5, 10, 7, 7, 7, 11, 11, 34], congelar: { filas: 3, columnas: 0 } } },
       { nombre: "Escalas", filas: h6, opciones: { anchoColumnas: [9, 45, 45, 45] } }
     ] };
   }
@@ -552,12 +783,19 @@
     subproceso: { id: "id", nombre: [200], descripcion: [1000], inicio: [300], fin: [300], roles: [500], color: { en: Array.from({ length: COLORES_SUB }, (_, i) => String(i)) } },
     miembro: { id: "id", perfil: [200], cargo: [200], rol: { en: Object.keys(ROLES) }, justificacion: [1000], nombre: [200] },
     sesion: { id: "id", fecha: [20], actividad: [500], duracion: [40], asistentes: { lista: "ref", max: 40 }, resultados: [1500] },
-    fallo: { id: "id", num: "ent", subprocesoId: "ref", fallo: [1000], efecto: [1000], causa: [1000], controles: [1000], g: [3], o: [3], d: [3], critico: "b", motivoCritico: [1000], manual: { en: ["", "si", "no"] }, motivo: [1000] },
+    fallo: { id: "id", num: "ent", subprocesoId: "ref", fallo: [1000], efecto: [1000], causa: [1000], controles: [1000], g: [3], o: [3], d: [3], critico: "b", motivoCritico: [1000], manual: { en: ["", "si", "no"] }, motivo: [1000], acciones: { de: "accion", max: 20 }, residual: { obj: "residual" } },
     prioridad: { modo: { en: ["top", "umbral"] }, n: [4], umbral: [5] },
+    indicador: { nombre: [500], formula: [1000], estandar: [60], fuente: [500] },
+    comprobacion: Object.fromEntries(Object.keys(COMPROBACION).map(k => [k, "b"])),
+    accion: { id: "id", que: [1500], porque: [1000], donde: [300], plazo: [100], fin: [20], quien: [300], como: [1500], tipo: { en: Object.keys(TIPOS_ACCION) }, clase: { en: ["", ...Object.keys(CLASES_ACCION)] }, actuaSobre: { lista: 2, max: 3, en: Object.keys(ACTUA) }, indicador: { obj: "indicador" }, comprobacion: { obj: "comprobacion" }, estado: { en: Object.keys(ESTADOS_ACCION) }, nota: [1000] },
+    residual: { g: [3], o: [3], d: [3], fecha: [40], nota: [1000] },
+    persona: { nombre: [200], cargo: [200] },
+    revision: { edicion: [10], fecha: [20], cambio: [500] },
+    control: { elaborado: { de: "persona", max: 10 }, revisado: { de: "persona", max: 10 }, aprobado: { de: "persona", max: 10 }, historial: { de: "revision", max: 50 } },
     amfe: { id: "id", titulo: [200], proceso: [300], unidad: [200], objetivo: [2000], inicio: [300], fin: [300], incluye: [2000], excluye: [2000], responsable: [300], fecha: [40],
-      subprocesos: { de: "subproceso", max: 40 }, equipo: { de: "miembro", max: 40 }, sesiones: { de: "sesion", max: 40 }, fallos: { de: "fallo", max: 500 }, escalas: { obj: "escalas" }, prioridad: { obj: "prioridad" }, notas: [3000], creado: [40], modificado: [40] }
+      subprocesos: { de: "subproceso", max: 40 }, equipo: { de: "miembro", max: 40 }, sesiones: { de: "sesion", max: 40 }, fallos: { de: "fallo", max: 500 }, escalas: { obj: "escalas" }, prioridad: { obj: "prioridad" }, introduccion: [4000], conclusiones: [5000], control: { obj: "control" }, proxRevision: [20], notas: [3000], creado: [40], modificado: [40] }
   };
-  const FABRICA = { escalas: nuevasEscalas, prioridad: nuevaPrioridad, subproceso: id => nuevoSubproceso(id), miembro: nuevoMiembro, sesion: nuevaSesion, fallo: id => nuevoFallo(id), amfe: id => nuevoAmfe(id, "") };
+  const FABRICA = { escalas: nuevasEscalas, prioridad: nuevaPrioridad, indicador: nuevoIndicador, comprobacion: nuevaComprobacion, accion: nuevaAccion, residual: nuevoResidual, persona: nuevaPersona, revision: () => ({ edicion: "", fecha: "", cambio: "" }), control: () => ({ elaborado: [], revisado: [], aprobado: [], historial: [] }), subproceso: id => nuevoSubproceso(id), miembro: nuevoMiembro, sesion: nuevaSesion, fallo: id => nuevoFallo(id), amfe: id => nuevoAmfe(id, "") };
   function sanear(esq, o, genId) {
     if (!o || typeof o !== "object" || Array.isArray(o)) return null;
     const S = ESQ[esq], r = FABRICA[esq](genId());
@@ -610,6 +848,9 @@
     avisosProceso, avisosEquipo, avisosFallos, avisosPuntuar, avisosPriorizar, avisos,
     nPrioridad, umbralPrioridad, prioridad, prioritarios, POR_TXT, sugerirMotivo, matriz, porSubproceso,
     FORMATO_INTERCAMBIO, VERSION_INTERCAMBIO, paqueteIntercambio, leerIntercambio, ESTILOS_XLSX, hojasExcel,
+    fmtFecha, TIPOS_ACCION, CLASES_ACCION, ACTUA, COMPROBACION, ESTADOS_ACCION, cuentaEstado, FUERZAS, fuerzaMedida,
+    nuevaAccion, nuevoIndicador, nuevoResidual, nuevaPersona, nuevoControl, iprResidual, vencida, accionCompleta, accionesDe, conAcciones, sugerirPorque, indicadoresDe,
+    avisosMejorar, avisosCerrar, resumenMejora, conclusionesSugeridas, introduccionSugerida, documentoInforme, documentoResumen,
     resumen, progreso, pasoPendiente, siguientePaso,
     parsearTabla, incorporarFilas,
     ESQ, sanear, sanearAmfe, sanearDatos, fusionar

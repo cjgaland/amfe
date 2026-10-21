@@ -4,6 +4,7 @@ const require = createRequire(import.meta.url);
 const L = require("../logic.js");
 const C = require("../contenido.js");
 const X = require("../xlsx.js");
+const D = require("../docx.js");
 
 let ok = 0, fallos = 0;
 const t = (nombre, cond) => { if (cond) ok++; else { fallos++; console.error("✗ " + nombre); } };
@@ -144,8 +145,9 @@ eq("Urgencias: zonas de la matriz de los 15", [...new Set(top15.map(f => L.zonaM
 eq("Urgencias: controles en los 15 primeros", top15.every(f => L.lleno(f.controles)), true);
 eq("Urgencias: ningún fallo parece causa o efecto", U.fallos.filter(f => L.tipoRedaccion(f.fallo)).length, 0);
 t("Urgencias: sin avisos de error ni de coordinación", !L.avisos(U).some(x => x.nivel === "error" || /coordinación|secretaría/.test(x.texto)));
-eq("Urgencias: pasos hechos", Object.entries(L.progreso(U)).filter(([, v]) => v).map(([k]) => k), ["1", "2", "4", "5", "6"]);
+eq("Urgencias: pasos hechos (el 7 no: quedan 6 prioritarios sin acción para practicar)", Object.entries(L.progreso(U)).filter(([, v]) => v).map(([k]) => k), ["1", "2", "4", "5", "6", "8"]);
 eq("Urgencias: sin paso pendiente en la entrega 2", L.pasoPendiente(U, 2), null);
+eq("Urgencias: paso pendiente en la entrega 3", L.pasoPendiente(U, 3).n, 7);
 
 // Priorización (entrega 2)
 const nums = l => l.map(f => f.num);
@@ -205,7 +207,8 @@ eq("Intercambio: otro formato", L.leerIntercambio({ formato: "otra", version: 1,
 
 // Excel
 const libro = L.hojasExcel(U, "21/10/2026");
-eq("Excel: hojas", libro.hojas.map(h => h.nombre), ["AMFE", "Prioritarios", "Matriz", "Subprocesos", "Equipo y sesiones", "Escalas"]);
+eq("Excel: hojas", libro.hojas.map(h => h.nombre), ["AMFE", "Prioritarios", "Matriz", "Subprocesos", "Equipo y sesiones", "Acciones", "Reevaluación", "Escalas"]);
+eq("Excel: filas de acciones y reevaluación", [libro.hojas[5].filas.length, libro.hojas[6].filas.length], [12, 12]);
 eq("Excel: filas de la hoja AMFE (3 de cabecera + 49)", libro.hojas[0].filas.length, 52);
 eq("Excel: filas de prioritarios", libro.hojas[1].filas.length, 18);
 eq("Excel: casilla G7 O7 de la matriz", [libro.hojas[2].filas[5][7].texto, libro.hojas[2].filas[5][7].estilo], ["10, 15", "z_naranja"]);
@@ -223,6 +226,64 @@ eq("Saneado: crítico y manual", [S2.amfes[0].fallos[0].critico, S2.amfes[0].fal
 eq("Aprende: 7 temas", C.TEMAS.length, 7);
 t("Aprende: todos con minuto, secciones, minicaso y práctica", C.TEMAS.every(x => x.minuto.length >= 3 && x.secciones.length >= 1 && x.minicaso && x.practica.href));
 t("Glosario: más de 20 términos sin repetir", C.GLOSARIO.length > 20 && new Set(C.GLOSARIO.map(g => g[0])).size === C.GLOSARIO.length);
+
+// Acciones de mejora y reevaluación (entrega 3)
+eq("Fuerza: checklist obligatorio", L.fuerzaMedida("Establecer un checklist digital obligatorio antes de cerrar el triaje"), "fuerte");
+eq("Fuerza: alerta automática", L.fuerzaMedida("Configurar una alerta visible automática en admisión"), "fuerte");
+eq("Fuerza: protocolo", L.fuerzaMedida("Actualizar el protocolo de identificación"), "intermedia");
+eq("Fuerza: formación", L.fuerzaMedida("Sesión de formación al personal"), "debil");
+eq("Vencida", [L.vencida({ fin: "2026-01-01", estado: "curso" }, "2026-02-01"), L.vencida({ fin: "2026-01-01", estado: "hecha" }, "2026-02-01"), L.vencida({ fin: "", estado: "pendiente" }, "2026-02-01")], [true, false, false]);
+const mU = L.resumenMejora(U, "2026-10-21");
+eq("Urgencias: acciones", [mU.acciones, mU.conAccion, mU.reevaluados, mU.vencidas], [9, 9, 9, 2]);
+eq("Urgencias: reducción del IPR", [mU.iprInicial, mU.iprResidual, mU.reduccion], [2569, 1063, 59]);
+const avM = L.avisosMejorar(U, "2026-10-21");
+t("Aviso: prioritarios sin acción", avM.some(x => /6 fallos prioritarios no tienen/.test(x.texto)));
+t("Aviso: acción vencida", avM.some(x => /terminó el 15\/12\/2025/.test(x.texto)));
+eq("Urgencias: sin avisos de cierre", L.avisosCerrar(U).length, 0);
+const W = JSON.parse(JSON.stringify(U)), w10 = W.fallos.find(f => f.num === 10), w8 = W.fallos.find(f => f.num === 8);
+w10.acciones.push(Object.assign(L.nuevaAccion("nueva"), { que: "Sesión de formación" }));
+const avW = L.avisosMejorar(W, "2026-10-21");
+t("Aviso: acción sin responsable, plazo ni indicador", avW.some(x => x.accion === "nueva" && /falta responsable, plazo y indicador/.test(x.texto)));
+t("Aviso: acción sin «actúa sobre»", avW.some(x => x.accion === "nueva" && /marca sobre qué actúa/.test(x.texto)));
+w10.residual = { g: "7", o: "7", d: "7", fecha: "", nota: "" };
+w8.residual = { g: "6", o: "5", d: "4", fecha: "", nota: "" };
+const avC = L.avisosCerrar(W);
+t("Aviso: el IPR residual no baja", avC.some(x => x.fallo === w10.id && /no baja del inicial/.test(x.texto)));
+t("Aviso: baja la gravedad sin nota", avC.some(x => x.fallo === w8.id && /la gravedad baja de 8 a 6/.test(x.texto)));
+const debiles = JSON.parse(JSON.stringify(U)); debiles.fallos.forEach(f => f.acciones.forEach(x => { x.que = "Sesión de formación y recordatorio"; }));
+t("Aviso: todas las acciones débiles", L.avisosMejorar(debiles, "").some(x => /medidas débiles/.test(x.texto)));
+eq("Por qué propuesto", L.sugerirPorque({ efecto: "Error de identidad", causa: "Rutina interrumpida" }), "Para evitar este efecto: error de identidad; actuando sobre su causa: rutina interrumpida.");
+t("Conclusiones propuestas con cifras", /49 fallos potenciales.*de 2569 a 1063 \(un 59 % menos\)/.test(L.conclusionesSugeridas(U)));
+const ind = L.indicadoresDe({ indicadores: [{ nombre: "Identificación correcta", numerador: "Pacientes con pulsera", denominador: "Pacientes atendidos", estandar: "95", sentido: "mas", fuentes: ["Historia clínica"] }, { nombre: "" }] });
+eq("Indicadores importados", ind, [{ nombre: "Identificación correcta", formula: "Pacientes con pulsera / Pacientes atendidos × 100", estandar: "≥ 95 %", fuente: "Historia clínica" }]);
+eq("Indicadores: no es una copia de Indicadores", L.indicadoresDe({ amfes: [] }), null);
+
+// Documentos
+const doc = L.documentoInforme(U, "21/10/2026"), h1 = doc.bloques.filter(b => b.t === "h1").map(b => b.texto);
+eq("Informe: apartados", h1, ["Control del documento", "1. Introducción", "2. Descripción del proceso", "3. Equipo y metodología", "4. Resultados del análisis", "5. Acciones de mejora", "6. Reevaluación del riesgo", "7. Conclusiones", "Anexo I. Escalas de puntuación", "Anexo II. Fallos analizados"]);
+const tablas = doc.bloques.filter(b => b.t === "tabla");
+t("Informe: todas las tablas con filas del mismo ancho que la cabecera", tablas.every(b => !b.cab || b.filas.every(f => f.length === b.cab.length)));
+t("Informe: matriz 10 × 10", tablas.some(b => b.cab && b.cab[0] === "G \\ O" && b.filas.length === 10));
+t("Informe: sin nombres en el control del ejemplo", JSON.stringify(doc.bloques).indexOf("Romero") < 0 && JSON.stringify(doc.bloques).indexOf("Galán") < 0);
+const word = D.construirDocx(Object.assign({ pie: "AMFE" }, doc));
+t("Informe: Word construido (ZIP)", word.length > 10000 && word[0] === 0x50 && word[1] === 0x4b);
+const res = L.documentoResumen(U, "21/10/2026"), tRes = res.bloques.find(b => b.t === "tabla");
+eq("Resumen: los 5 primeros con su acción", tRes.filas.map(f => f[0].texto), ["10", "8", "5", "15", "29"]);
+t("Resumen: Word construido", D.construirDocx(res).length > 5000);
+const vacioDoc = L.documentoInforme(L.nuevoAmfe("v", ""), "");
+t("Informe de un AMFE vacío no falla", vacioDoc.bloques.length > 5 && D.construirDocx(vacioDoc).length > 3000);
+
+// Intercambio con acciones y residual
+const pq = L.leerIntercambio(JSON.parse(JSON.stringify(L.paqueteIntercambio([U], "2026.03", ""))))[0], p10 = pq.fallos.find(f => f.num === 10);
+eq("Intercambio: acción y residual", [p10.acciones.length, p10.acciones[0].fuerza, p10.acciones[0].indicador.estandar, p10.residual], [1, "fuerte", "≥ 95 %", { g: 7, o: 4, d: 3, ipr: 84 }]);
+eq("Intercambio: sin residual", pq.fallos.find(f => f.num === 7).residual, null);
+
+// Saneado de los campos nuevos
+const S3 = L.sanearDatos({ amfes: [{ id: "s", control: { aprobado: [{ nombre: "X", cargo: 3 }], historial: "no" }, fallos: [{ id: "f", num: 1, fallo: "x", residual: { g: 5 }, acciones: [{ id: "a", que: "Hacer", actuaSobre: ["o", "z", "o"], estado: "rara", tipo: "otra", indicador: { nombre: "I" }, comprobacion: { medible: true, factible: "si" } }] }] }] }, gid, "");
+const A3 = S3.amfes[0], x3 = A3.fallos[0].acciones[0];
+eq("Saneado: acción", [x3.que, x3.actuaSobre, x3.estado, x3.tipo, x3.indicador.nombre, x3.indicador.estandar, x3.comprobacion.medible, x3.comprobacion.factible], ["Hacer", ["o"], "pendiente", "correctora", "I", "", true, false]);
+eq("Saneado: residual y control", [A3.fallos[0].residual.g, A3.control.aprobado[0], A3.control.historial], ["5", { nombre: "X", cargo: "3" }, []]);
+eq("Saneado: AMFE sin control trae el control por defecto", L.sanearAmfe({ id: "k" }, gid, "").control.historial[0].cambio, "Documento inicial");
 
 console.log(`${ok} pruebas correctas, ${fallos} fallidas`);
 if (fallos) process.exit(1);
