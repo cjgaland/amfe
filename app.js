@@ -14,8 +14,16 @@
   // ---------- Versión y novedades ----------
   // Al publicar cambios: añadir una entrada AL PRINCIPIO de NOVEDADES, poner su versión en los ?v= de index.html, en
   // APP_VERSION y subir CACHE_NAME en sw.js. Formato de versión: AAAA.NN.
-  const APP_VERSION = "2026.01";
+  const APP_VERSION = "2026.02";
   const NOVEDADES = [
+    { version: "2026.02", fecha: "Octubre 2026", titulo: "Priorizar y matriz de riesgos", cambios: [
+      "Nuevo paso 6, Priorizar: los N fallos de mayor IPR (15 por defecto, como el curso) o los que superan un umbral de IPR.",
+      "Los fallos de gravedad 9–10 se señalan siempre, y se puede marcar un fallo como «crítico» o añadirlo y quitarlo a mano, escribiendo el motivo (la app propone uno).",
+      "Matriz de riesgos gravedad × ocurrencia con las zonas de colores del curso, en 10 × 10 o agrupada en 5 × 5, con cada fallo del color de su subproceso.",
+      "Priorización por subprocesos: dónde se concentran los riesgos.",
+      "Exportar a Excel: tabla AMFE completa, prioritarios, matriz, subprocesos, equipo y sesiones, y escalas.",
+      "La tabla imprimible y el PDF incluyen los prioritarios, la matriz y la priorización por subprocesos.",
+      "Las apps Mapa de Riesgos y Auditorías podrán traer los fallos de este AMFE en el mismo navegador (próximamente en ellas)."] },
     { version: "2026.01", fecha: "Octubre 2026", titulo: "Primera versión: describir, analizar y puntuar", cambios: [
       "Asistente en 8 pasos con «Tu siguiente paso» en la portada. En esta versión están disponibles los pasos 1, 2, 4 y 5.",
       "El proceso y sus subprocesos, con su inicio, su fin y quién interviene, y propuesta del objetivo del proceso.",
@@ -25,7 +33,7 @@
       "Puntuación de gravedad, ocurrencia y detección con la escala a la vista, IPR automático, orden por IPR y avisos de las trampas más habituales.",
       "Ejemplo completo del Servicio de Urgencias (49 fallos), Aprende (7 temas), glosario, tabla imprimible y copia de seguridad."] }
   ];
-  const ENTREGA = 1;   // pasos ya construidos (ver L.PASOS[].entrega)
+  const ENTREGA = 2;   // pasos ya construidos (ver L.PASOS[].entrega)
 
   // ---------- Utilidades ----------
   const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -43,7 +51,7 @@
   const escribir = (k, v) => { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } };
 
   // ---------- Datos (solo en este dispositivo) ----------
-  const KEY_DATOS = "amfe-datos";
+  const KEY_DATOS = "amfe-datos", KEY_INTERCAMBIO = "amfe-intercambio";
   let datos = { amfes: [], ultimaCopia: null };
   (function cargar() {
     const crudo = leer(KEY_DATOS); if (!crudo) return;
@@ -66,6 +74,8 @@
     clearTimeout(tGuardar);
     const fn = () => {
       const ok = escribir(KEY_DATOS, JSON.stringify({ app: "amfe", v: L.VERSION_DATOS, ultimaCopia: datosUsuario.ultimaCopia, amfes: datosUsuario.amfes }));
+      // Paquete con forma fija para que otras apps del mismo dominio lo lean («Traer de AMFE»); nunca leen amfe-datos
+      try { escribir(KEY_INTERCAMBIO, JSON.stringify(L.paqueteIntercambio(datosUsuario.amfes, APP_VERSION, hoy()))); } catch (e) { /* */ }
       if (!ok && !avisoSinEspacio) { avisoSinEspacio = true; toast("No se ha podido guardar en este navegador (¿modo privado o sin espacio?). Haz una copia de seguridad.", 6000); }
     };
     if (inmediato) fn(); else tGuardar = setTimeout(fn, 250);
@@ -230,7 +240,7 @@
   let actual = null, pasoActual = 1;
   const abiertos = new Set();          // fallos desplegados en el paso 4
   let pegarAbierto = false;
-  const avisosDe = (a, n) => ({ 1: L.avisosProceso, 2: L.avisosEquipo, 4: L.avisosFallos, 5: L.avisosPuntuar }[n] || (() => []))(a);
+  const avisosDe = (a, n) => ({ 1: L.avisosProceso, 2: L.avisosEquipo, 4: L.avisosFallos, 5: L.avisosPuntuar, 6: L.avisosPriorizar }[n] || (() => []))(a);
   const avisosGenerales = (a, n) => avisosDe(a, n).filter(x => !x.fallo).map(avisoHtml).join("");
   const avisosFallo = (a, n, id) => avisosDe(a, n).filter(x => x.fallo === id).map(avisoHtml).join("");
 
@@ -472,24 +482,111 @@
           + (F.some(f => !L.subDe(a, f)) ? `<section class="grupo-sub"><h3 class="grupo-t">${subPunto(null)}Sin subproceso</h3><div class="punt-lista">${L.ordenarFallos(F.filter(f => !L.subDe(a, f)), "num").map(f => filaPuntuar(a, f)).join("")}</div></section>` : "")
         : `<div class="placeholder-box"><p>Aún no hay fallos que puntuar. <a href="#/amfe/${a.id}/4">Escríbelos en el paso 4</a>.</p></div>`}
       <h2 class="sec-t">Orden por IPR</h2>
-      <p class="page-lead">Así queda la prioridad. La selección de los fallos prioritarios, la matriz de riesgos y los fallos críticos llegan en la próxima versión.</p>
+      <p class="page-lead">Así queda el orden. En el paso 6 elegiréis los fallos prioritarios y los veréis en la matriz de riesgos.</p>
       <div class="card chart-card" data-zona="grafico">${grafico(a)}</div>
       <div data-zona="orden">${tablaOrden(a)}</div>
-      ${F.length ? `<div class="toolbar no-print sep-arriba"><button class="btn" data-act="informe">Ver tabla / PDF</button></div>` : ""}`;
+      ${F.length ? `<div class="toolbar no-print sep-arriba"><button class="btn" data-act="informe">Ver tabla / PDF</button><button class="btn" data-act="excel">Exportar a Excel</button></div>` : ""}`;
   }
   function resumen5(r) {
     if (!r.n) return "";
     return `<span class="badge">${r.puntuados} de ${r.n} puntuados</span>${r.maxIPR ? iprBadge(r.maxIPR) : ""}${["muyalto", "alto", "medio", "bajo"].filter(k => r.porNivel[k]).map(k => `<span class="ipr-badge niv--${k}">${r.porNivel[k]} ${L.NIVELES_IPR.find(x => x.k === k).nom.toLowerCase()}</span>`).join("")}`;
   }
 
-  const RENDER = { 1: paso1, 2: paso2, 4: paso4, 5: paso5 };
+  // ---------- Paso 6 · Priorizar ----------
+  const KEY_MATRIZ = "amfe-matriz";
+  let tamMatriz = leer(KEY_MATRIZ) === "5" ? 5 : 10, soloPrio = true;
+  const ZONA_COLOR = { verde: "verde", amarillo: "amarillo", naranja: "naranja", rojo: "rojo" };
+  const zonaBadge = z => z ? `<span class="zona-b zona--${z}" title="Zona ${z} de la matriz de riesgos: riesgo ${L.ZONAS[z].nom.toLowerCase()}, ${L.ZONAS[z].que}">Zona ${z}</span>` : "";
+  function matrizHtml(a, tam = tamMatriz, solo = soloPrio, conControles = true) {
+    const m = L.prioridad(a), F = a.fallos.filter(f => lleno(f.fallo) && L.iprDe(f) && (!solo || m[f.id].prio));
+    const M = L.matriz(F, tam), etq = i => tam === 10 ? String(i) : L.TRAMOS[i - 1];
+    const leyendaSub = a.subprocesos.filter(s => F.some(f => f.subprocesoId === s.id));
+    return `${conControles ? `<div class="mz-ctl no-print"><div class="seg" role="group" aria-label="Tamaño de la matriz">${[[10, "10 × 10"], [5, "5 × 5"]].map(([v, t]) => `<button type="button" class="${tam === v ? "active" : ""}" data-act="mz-tam" data-v="${v}">${t}</button>`).join("")}</div><div class="seg" role="group" aria-label="Qué fallos se ven">${[[true, "Prioritarios"], [false, "Todos"]].map(([v, t]) => `<button type="button" class="${solo === v ? "active" : ""}" data-act="mz-solo" data-v="${v ? 1 : 0}">${t}</button>`).join("")}</div></div>` : ""}
+      <div class="mz-wrap">
+        <div class="mz-eje-g" aria-hidden="true">Gravedad</div>
+        <div class="mz mz--${tam}" role="table" aria-label="Matriz de riesgos: gravedad (filas) por ocurrencia (columnas)">
+          ${M.map(fila => `<div class="mz-n" role="rowheader">${etq(fila[0].g)}</div>${fila.map(cl => `<div class="mz-c mz--${ZONA_COLOR[cl.zona]}" role="cell" title="G ${etq(cl.g)} · O ${etq(cl.o)} · zona ${cl.zona}${cl.fallos.length ? " · " + plural(cl.fallos.length, "fallo", "fallos") : ""}">${cl.fallos.map(f => { const s = L.subDe(a, f); return `<button type="button" class="mz-f sub-c${s ? s.color : "x"}${m[f.id].prio ? "" : " mz-f--no"}" data-act="ir-fallo" data-id="${f.id}" title="Nº ${f.num} · ${esc(L.corto(f.fallo, 80))} · IPR ${L.iprDe(f)}">${f.num}</button>`; }).join("")}</div>`).join("")}`).join("")}
+          <div></div>${Array.from({ length: tam }, (_, i) => `<div class="mz-n mz-n--o">${etq(i + 1)}</div>`).join("")}
+        </div>
+        <div class="mz-eje-o" aria-hidden="true">Ocurrencia</div>
+      </div>
+      <div class="leyenda">${Object.keys(L.ZONAS).map(z => `<span><i class="mz--${z}"></i>${L.ZONAS[z].nom} (${L.ZONAS[z].que})</span>`).join("")}</div>
+      ${leyendaSub.length ? `<div class="leyenda">${leyendaSub.map(s => `<span>${subPunto(s)}${esc(L.corto(s.nombre, 34))}</span>`).join("")}</div>` : ""}
+      <p class="field-sub">${F.length ? `${plural(F.length, "fallo", "fallos")} en la matriz. Cada número es un fallo, del color de su subproceso${solo ? "" : "; los apagados no son prioritarios"}. Toca uno para ir a él.` : "No hay fallos que mostrar."}</p>`;
+  }
+  function criterioRes(a) {
+    const m = L.prioridad(a), l = Object.values(m).filter(x => x.prio);
+    const n = { criterio: l.filter(x => x.por === "criterio").length, critico: l.filter(x => x.por === "critico").length, manual: l.filter(x => x.por === "manual").length };
+    const graves = Object.values(m).filter(x => x.grave).length;
+    return `<b>${plural(l.length, "fallo prioritario", "fallos prioritarios")}</b>: ${[n.criterio ? `${n.criterio} por IPR` : "", n.critico ? `${n.critico} ${n.critico === 1 ? "crítico" : "críticos"}` : "", n.manual ? `${n.manual} a mano` : ""].filter(Boolean).join(", ") || "ninguno"}.${graves ? ` ${plural(graves, "fallo tiene", "fallos tienen")} gravedad 9–10.` : ""}`;
+  }
+  function filaPrio(a, f, P, m) {
+    const e = m[f.id], s = L.subDe(a, f);
+    const porTxt = e.prio ? (e.por === "criterio" ? (a.prioridad.modo === "umbral" ? "Supera el umbral de IPR" : `Entre los ${L.nPrioridad(a)} de mayor IPR`) : e.por === "critico" ? "Fallo crítico" : "Añadido a mano") : (f.manual === "no" ? "Quitado a mano" : "No prioritario");
+    const bm = k => `data-fa="${f.id}" data-f="${k}"`;
+    return `<div class="pf sub-c${s ? s.color : "x"}${e.prio ? " pf--on" : ""}" data-pf="${f.id}">
+      <div class="pf-cab"><span class="rg-puesto">${P[f.id] ? "#" + P[f.id] : "–"}</span>
+        <span class="pf-txt"><b>Nº ${f.num} · ${esc(f.fallo)}</b><span>${subPunto(s)}${esc(s ? s.nombre : "Sin subproceso")} · G ${esc(f.g)} · O ${esc(f.o)} · D ${esc(f.d)}</span></span>
+        <span class="pf-badges">${iprBadge(L.iprDe(f))}${e.grave ? `<span class="badge badge--grave" title="Gravedad 9–10">Muy grave</span>` : ""}${zonaBadge(e.zona)}</span></div>
+      <div class="pf-acc no-print">
+        <button type="button" class="pf-btn${e.prio ? " on" : ""}" data-act="pf-prio" data-id="${f.id}" aria-pressed="${e.prio}" ${f.critico ? 'disabled title="Un fallo crítico siempre es prioritario"' : ""}>${e.prio ? "★ Prioritario" : "☆ No prioritario"}</button>
+        <span class="pf-por">${porTxt}</span>
+        <label class="pf-crit"><input type="checkbox" data-act="pf-critico" data-id="${f.id}"${f.critico ? " checked" : ""} /> Fallo crítico</label>
+      </div>
+      ${f.critico ? campo(f, "motivoCritico", "¿Por qué es crítico?", { bind: bm("motivoCritico"), area: true, ph: "p. ej. Evento centinela en el último año", extra: `<div class="quick no-print"><button type="button" class="chip chip--accent" data-act="pf-motivo" data-id="${f.id}" data-k="motivoCritico">✎ Proponer motivo</button></div>` }) : ""}
+      ${f.manual ? campo(f, "motivo", f.manual === "si" ? "¿Por qué lo añadís a los prioritarios?" : "¿Por qué lo quitáis de los prioritarios?", { bind: bm("motivo"), area: true, ph: f.manual === "si" ? "p. ej. Gravedad 9 y ningún control actual" : "p. ej. Ya hay una acción en marcha", extra: f.manual === "si" ? `<div class="quick no-print"><button type="button" class="chip chip--accent" data-act="pf-motivo" data-id="${f.id}" data-k="motivo">✎ Proponer motivo</button></div>` : "" }) : ""}
+      <div data-zav="${f.id}">${avisosFallo(a, 6, f.id)}</div>
+    </div>`;
+  }
+  function listaPrio(a) {
+    const P = L.puestos(a.fallos), m = L.prioridad(a), F = L.ordenarFallos(a.fallos.filter(f => lleno(f.fallo) && L.iprDe(f)));
+    return F.length ? F.map(f => filaPrio(a, f, P, m)).join("") : `<p class="placeholder-box">Aún no hay fallos puntuados. <a href="#/amfe/${a.id}/5">Puntúalos en el paso 5</a>.</p>`;
+  }
+  function porSubHtml(a) {
+    const S = L.porSubproceso(a).filter(s => s.n), max = Math.max(1, ...S.map(s => s.max));
+    if (!S.length) return `<p class="field-sub">Aún no hay fallos en los subprocesos.</p>`;
+    return `<div class="table-wrap"><table class="mini tabla-porsub"><thead><tr><th>Subproceso</th><th>Fallos</th><th>Prioritarios</th><th>IPR máx.</th><th>IPR medio</th><th class="col-barra">IPR máximo</th></tr></thead><tbody>
+      ${S.map(s => `<tr><td>${subPunto(s)}${esc(s.nombre || "Sin nombre")}</td><td>${s.n}</td><td><b>${s.prio}</b></td><td>${s.max ? iprBadge(s.max) : "—"}</td><td>${s.media || "—"}</td><td class="col-barra"><span class="barra sub-c${s.color}"><i style="width:${Math.round(s.max / max * 100)}%"></i></span></td></tr>`).join("")}
+    </tbody></table></div>`;
+  }
+  function paso6(a) {
+    const umbral = a.prioridad.modo === "umbral";
+    return `
+      ${idea("No se puede actuar sobre todo a la vez. Priorizar es decidir <b>por dónde empezar</b>: los fallos de mayor IPR, sin olvidar los muy graves.")}
+      ${facil(`<p>Lo habitual es quedarse con <b>los de mayor IPR</b> (en el curso, los 15 primeros) o con los que <b>superan un umbral</b> que acuerda el equipo. Además:</p>
+        <ul><li>Un fallo con <b>gravedad 9–10</b> merece atención aunque su IPR no sea de los primeros: la app lo señala siempre.</li>
+        <li>La marca <b>«fallo crítico»</b> sube un fallo a prioritario aunque su IPR sea bajo (un evento centinela, una exigencia normativa…). Usarla mucho distorsiona la jerarquía: escribid siempre el motivo.</li>
+        <li>El equipo puede <b>añadir o quitar</b> un fallo a mano, explicando por qué.</li></ul>
+        <p>La <b>matriz de riesgos</b> coloca cada fallo según su gravedad (filas) y su ocurrencia (columnas). No tiene en cuenta la detección, así que no sustituye al IPR, pero <b>comunica el riesgo de un vistazo</b>.</p>
+        ${trampa("Un fallo en la zona roja de la matriz puede no salir prioritario por IPR porque «se detecta fácil». Comprobad que esa detección existe de verdad.")}`)}
+      <div class="card">
+        <h2 class="sub-h">Criterio de prioridad</h2>
+        <div class="seg" role="group">${[["top", "Los N de mayor IPR"], ["umbral", "Umbral de IPR"]].map(([v, t]) => `<button type="button" class="${a.prioridad.modo === v ? "active" : ""}" data-act="prio-modo" data-v="${v}">${t}</button>`).join("")}</div>
+        ${umbral ? campo(a, "prioridad.umbral", "Prioritarios los fallos con IPR igual o mayor que…", { ph: "p. ej. 200", help: "Un umbral acordado por el equipo. Como orientación: 300 o más es muy alto, de 200 a 299 alto y de 100 a 199 medio." })
+          : campo(a, "prioridad.n", "¿Cuántos fallos de mayor IPR?", { ph: "15", help: "En el curso se eligen los 15 de mayor IPR. A igual IPR, la app pone antes el de más gravedad." })}
+        <p class="criterio-res" data-zona="criterio">${criterioRes(a)}</p>
+      </div>
+      <div data-zona="avisos">${avisosGenerales(a, 6)}</div>
+      <h2 class="sec-t">Matriz de riesgos</h2>
+      <div class="card chart-card" data-zona="matriz">${matrizHtml(a)}</div>
+      <h2 class="sec-t">Fallos por orden de IPR</h2>
+      <p class="page-lead">Los marcados con ★ son los prioritarios: pasarán a las acciones de mejora.</p>
+      <div class="pf-lista" data-zona="lista6">${listaPrio(a)}</div>
+      <h2 class="sec-t">Priorización por subprocesos</h2>
+      <p class="page-lead">Dónde se concentran los riesgos del proceso.</p>
+      <div data-zona="porsub">${porSubHtml(a)}</div>
+      <div class="toolbar no-print sep-arriba"><button class="btn" data-act="informe">Ver tabla / PDF</button><button class="btn" data-act="excel">Exportar a Excel</button></div>
+      ${practica("Las apps <b>Mapa de Riesgos</b> y <b>Auditorías</b> podrán traer estos fallos, con su IPR y su prioridad, desde este mismo navegador. Si trabajáis en otro dispositivo, usad la copia de seguridad.")}`;
+  }
+
+  const RENDER = { 1: paso1, 2: paso2, 4: paso4, 5: paso5, 6: paso6 };
 
   // ---------- Vista imprimible: la tabla AMFE ----------
   function renderTabla(a) {
     const fila = (k, v) => lleno(v) ? `<tr><th>${k}</th><td>${escMl(v)}</td></tr>` : "";
     const r = L.resumen(a), P = L.puestos(a.fallos);
     const porSub = L.ordenarFallos(a.fallos.filter(f => lleno(f.fallo)), "sub", a.subprocesos);
-    const porIpr = L.ordenarFallos(a.fallos.filter(L.iprDe));
+    const porIpr = L.ordenarFallos(a.fallos.filter(L.iprDe)), PR = L.prioritarios(a), MP = L.prioridad(a);
     const filaF = f => { const s = L.subDe(a, f); return `<tr><td>${f.num}</td><td>${esc(s ? s.nombre : "")}</td><td><b>${esc(f.fallo)}</b></td><td>${esc(f.efecto)}</td><td>${esc(f.causa)}</td><td>${esc(f.controles)}</td><td>${esc(f.g)}</td><td>${esc(f.o)}</td><td>${esc(f.d)}</td><td>${iprBadge(L.iprDe(f))}</td></tr>`; };
     const cab = `<thead><tr><th>Nº</th><th>Subproceso</th><th>Modo de fallo</th><th>Efecto</th><th>Causa</th><th>Controles actuales</th><th>G</th><th>O</th><th>D</th><th>IPR</th></tr></thead>`;
     view.innerHTML = `${informeBar()}${informeCab("AMFE" + (lleno(nombreAmfe(a)) ? " · " + nombreAmfe(a) : ""), a.unidad)}
@@ -506,6 +603,13 @@
       ${porIpr.length ? `<h2 class="sec-t">Fallos ordenados por IPR</h2>
       <div class="chart-card informe-graf">${grafico(a)}</div>
       <div class="table-wrap"><table class="mini tabla-riesgos"><thead><tr><th>Puesto</th><th>Nº</th><th>Subproceso</th><th>Modo de fallo</th><th>G</th><th>O</th><th>D</th><th>IPR</th></tr></thead><tbody>${porIpr.map(f => `<tr><td>${P[f.id]}</td><td>${f.num}</td><td>${esc(L.nombreSub(a, f))}</td><td><b>${esc(f.fallo)}</b></td><td>${esc(f.g)}</td><td>${esc(f.o)}</td><td>${esc(f.d)}</td><td>${iprBadge(L.iprDe(f))}</td></tr>`).join("")}</tbody></table></div>` : ""}
+      ${PR.length ? `<h2 class="sec-t">Fallos prioritarios</h2>
+      <p class="field-sub">Criterio: ${a.prioridad.modo === "umbral" ? `IPR igual o mayor que ${esc(L.umbralPrioridad(a) || "—")}` : `los ${L.nPrioridad(a)} de mayor IPR`}${PR.some(f => f.critico) ? ", más los fallos críticos" : ""}${PR.some(f => f.manual === "si") ? " y los añadidos por el equipo" : ""}.</p>
+      <div class="table-wrap"><table class="mini tabla-riesgos tabla-amfe"><thead><tr><th>Puesto</th><th>Nº</th><th>Subproceso</th><th>Modo de fallo</th><th>Efecto</th><th>Causa</th><th>IPR</th><th>Motivo</th></tr></thead><tbody>${PR.map(f => { const e = MP[f.id]; return `<tr><td>${P[f.id] || ""}</td><td>${f.num}</td><td>${esc(L.nombreSub(a, f))}</td><td><b>${esc(f.fallo)}</b>${e.grave ? " <span class=\"badge badge--grave\">Muy grave</span>" : ""}</td><td>${esc(f.efecto)}</td><td>${esc(f.causa)}</td><td>${iprBadge(L.iprDe(f))}</td><td>${esc(e.por === "critico" ? "Fallo crítico. " + f.motivoCritico : e.por === "manual" ? "Decisión del equipo. " + f.motivo : "Criterio de IPR")}</td></tr>`; }).join("")}</tbody></table></div>
+      <h2 class="sec-t">Matriz de riesgos</h2>
+      <div class="chart-card informe-graf">${matrizHtml(a, tamMatriz, true, false)}</div>
+      <h2 class="sec-t">Priorización por subprocesos</h2>
+      ${porSubHtml(a)}` : ""}
       <h2 class="sec-t">Escalas de puntuación</h2>
       ${escalaHtml(a)}
       ${lleno(a.notas) ? `<p class="field-sub">${escMl(a.notas)}</p>` : ""}
@@ -513,15 +617,19 @@
   }
 
   // Refresca lo que depende de lo escrito sin repintar los campos (no se pierde el foco)
-  function refrescar(idFallo) {
+  function refrescar(idFallo, todo) {
     const a = actual; if (!a) return;
     const n = pasoActual;
     const Z = {
       pasos: () => pasosInner(a, n),
       avisos: () => avisosGenerales(a, n),
       nsub: () => String(a.subprocesos.length), neq: () => String(a.equipo.length), nses: () => String(a.sesiones.length),
-      resumen5: () => resumen5(L.resumen(a)), grafico: () => grafico(a), orden: () => tablaOrden(a)
+      resumen5: () => resumen5(L.resumen(a)), grafico: () => grafico(a), orden: () => tablaOrden(a),
+      criterio: () => criterioRes(a), matriz: () => matrizHtml(a), porsub: () => porSubHtml(a),
+      lista6: () => listaPrio(a)
     };
+    // La lista del paso 6 solo se repinta si se cambia el criterio (si se escribe un motivo dentro, se perdería el foco)
+    if (!todo) delete Z.lista6;
     $$("[data-zona]").forEach(el => { const f = Z[el.dataset.zona]; if (f) el.innerHTML = f(); });
     $$("[data-zav]").forEach(el => { el.innerHTML = avisosFallo(a, n, el.dataset.zav); });
     if (idFallo) {
@@ -560,7 +668,7 @@
       <h1 class="page-title">Ejemplos</h1>
       <p class="page-lead">Para ver cómo queda cada paso antes de hacerlo tú. Están aparte: puedes tocarlos, pero <b>no se guardan ni se mezclan con tus datos</b>. Si te sirve de punto de partida, pulsa «Copiar a mis datos».</p>
       <h2 class="sec-t">Ejemplo completo: atención en Urgencias</h2>
-      <p class="field-sub">El AMFE del proceso «Atención integral en el Servicio de Urgencias», desde que el paciente llega a admisión hasta la decisión sobre su destino. Siete subprocesos, un equipo de diez perfiles, tres sesiones de trabajo y 49 fallos con su efecto, su causa y su puntuación. El fallo de mayor IPR: <i>omisión de constantes clave o mal registro en el triaje</i> (7 × 7 × 7 = 343).</p>
+      <p class="field-sub">El AMFE del proceso «Atención integral en el Servicio de Urgencias», desde que el paciente llega a admisión hasta la decisión sobre su destino. Siete subprocesos, un equipo de diez perfiles, tres sesiones de trabajo, 49 fallos con su efecto, su causa y su puntuación, y los 15 prioritarios en la matriz de riesgos. El fallo de mayor IPR: <i>omisión de constantes clave o mal registro en el triaje</i> (7 × 7 × 7 = 343).</p>
       <div class="ej-grid">${C.EJEMPLOS.fichas.map(f => `<a class="ej-card" href="${f.href}"><b>${esc(f.t)}</b><span>${esc(f.s)}</span></a>`).join("")}<a class="ej-card" href="#/amfe/ej-amfe-urg/1?informe=1"><b>Tabla AMFE</b><span>Todo en una vista imprimible</span></a></div>
       <h2 class="sec-t">Minicasos</h2>
       <p class="placeholder-box">Próximamente: casos cortos (transfusión, administración de medicación, alta hospitalaria, quirófano…) para practicar cada paso.</p>
@@ -746,7 +854,7 @@
 
   // ---------- Copia de seguridad e importar ----------
   async function copiaSeguridad() {
-    const contenido = JSON.stringify({ app: "amfe", v: L.VERSION_DATOS, exportado: hoy(), amfes: datosUsuario.amfes }, null, 1);
+    const contenido = JSON.stringify({ app: "amfe", v: L.VERSION_DATOS, exportado: hoy(), amfes: datosUsuario.amfes, intercambio: L.paqueteIntercambio(datosUsuario.amfes, APP_VERSION, hoy()) }, null, 1);
     const nombre = `AMFE copia ${new Date().toISOString().slice(0, 10)}.json`;
     const blob = new Blob([contenido], { type: "application/json" });
     const file = new File([blob], nombre, { type: "application/json" });
@@ -774,6 +882,18 @@
       confirmar(`<p>La copia tiene <b>${plural(s.amfes.length, "AMFE", "AMFE")}</b>.</p><p><b>Añadir</b> los junta con los tuyos (si uno está en los dos, se queda el más reciente): así se trabaja en equipo. Si prefieres <b>sustituir</b> todo lo tuyo por la copia, pulsa «Sustituir».</p>`, "Añadir a mis datos", () => aplicar("anadir"), { titulo: "Importar copia", peligro: false, otro: ["Sustituir", () => confirmar("<p>Se borrarán tus AMFE actuales y se quedará solo lo de la copia. Esto no se puede deshacer.</p>", "Sustituir", () => aplicar("sustituir"))] });
     };
     fr.readAsText(file);
+  }
+
+  function exportarExcel(a) {
+    try {
+      const bytes = window.Xlsx.construirLibroXlsx(L.hojasExcel(a, new Date().toLocaleDateString("es-ES")));
+      compartirOBajar(new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), nombreArchivo("xlsx"), "Excel descargado.");
+    } catch (e) { toast("No se ha podido crear el Excel.", 4000); }
+  }
+  function compartirOBajar(blob, nombre, msg) {
+    const file = new File([blob], nombre, { type: blob.type });
+    if (esIOS() && navigator.canShare && navigator.canShare({ files: [file] })) navigator.share({ files: [file], title: nombre }).catch(() => {});
+    else { descargar(blob, nombre); toast(msg, 3000); }
   }
 
   // ---------- Confirmación ----------
@@ -870,7 +990,7 @@
       if (esSel) { abiertos.add(fa.id); repintar(); } else refrescar(fa.id);
       return;
     }
-    if (t.dataset.k) { setPath(a, t.dataset.k, t.value); tocado(a); refrescar(); }
+    if (t.dataset.k) { setPath(a, t.dataset.k, t.value); tocado(a); refrescar(null, /^prioridad\./.test(t.dataset.k)); }
   });
   view.addEventListener("toggle", e => {
     if (e.target.matches && e.target.matches("details[data-recordar]") && !document.body.classList.contains("ver-informe")) escribir(KEY_FACIL, e.target.open ? "1" : "0");
@@ -986,6 +1106,34 @@
       pegarAbierto = false; tocado(a); repintar();
       toast(`Añadidos ${plural(p.filas.length, "fallo", "fallos")}${ns ? ` y ${plural(ns, "subproceso nuevo", "subprocesos nuevos")}` : ""}.`, 4000);
     }
+    // --- Paso 6 ---
+    else if (act === "prio-modo" && a) { a.prioridad.modo = b.dataset.v; tocado(a); repintar(); }
+    else if (act === "mz-tam") { tamMatriz = Number(b.dataset.v) === 5 ? 5 : 10; escribir(KEY_MATRIZ, String(tamMatriz)); const z = $("[data-zona='matriz']"); if (z && a) z.innerHTML = matrizHtml(a); }
+    else if (act === "mz-solo") { soloPrio = b.dataset.v === "1"; const z = $("[data-zona='matriz']"); if (z && a) z.innerHTML = matrizHtml(a); }
+    else if (act === "ir-fallo") {
+      const el = $(`[data-pf="${id}"]`); if (!el) return;
+      el.scrollIntoView({ block: "center", behavior: "smooth" }); el.classList.remove("pf--flash"); void el.offsetWidth; el.classList.add("pf--flash");
+    }
+    else if (act === "pf-prio" && a) {
+      const f = buscaEn(a.fallos, id); if (!f || f.critico) return;
+      const e = L.prioridad(a)[f.id];
+      // Alterna entre lo que dice el criterio y la decisión del equipo
+      f.manual = f.manual ? "" : (e.prio ? "no" : "si");
+      if (f.manual === "si" && !lleno(f.motivo)) f.motivo = L.sugerirMotivo(a, f);
+      tocado(a); repintar();
+      if (f.manual) { const el = $(`[data-fa="${f.id}"][data-f="motivo"]`); if (el) el.focus(); }
+    }
+    else if (act === "pf-critico" && a) {
+      const f = buscaEn(a.fallos, id); if (!f) return;
+      f.critico = b.checked; tocado(a); repintar();
+      if (f.critico) { const el = $(`[data-fa="${f.id}"][data-f="motivoCritico"]`); if (el) el.focus(); }
+    }
+    else if (act === "pf-motivo" && a) {
+      const f = buscaEn(a.fallos, id), k = b.dataset.k; if (!f) return;
+      const s = L.sugerirMotivo(a, f), hacer = () => { f[k] = s; tocado(a); repintar(); };
+      if (lleno(f[k])) confirmar("<p>Se sustituirá el motivo que has escrito por el propuesto.</p>", "Sustituir", hacer, { peligro: false }); else hacer();
+    }
+    else if (act === "excel" && a) exportarExcel(a);
     // --- Generales ---
     else if (act === "informe") irInforme();
     else if (act === "volver") location.hash = rutaActual();

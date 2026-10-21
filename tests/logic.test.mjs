@@ -3,6 +3,7 @@ import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const L = require("../logic.js");
 const C = require("../contenido.js");
+const X = require("../xlsx.js");
 
 let ok = 0, fallos = 0;
 const t = (nombre, cond) => { if (cond) ok++; else { fallos++; console.error("✗ " + nombre); } };
@@ -143,8 +144,80 @@ eq("Urgencias: zonas de la matriz de los 15", [...new Set(top15.map(f => L.zonaM
 eq("Urgencias: controles en los 15 primeros", top15.every(f => L.lleno(f.controles)), true);
 eq("Urgencias: ningún fallo parece causa o efecto", U.fallos.filter(f => L.tipoRedaccion(f.fallo)).length, 0);
 t("Urgencias: sin avisos de error ni de coordinación", !L.avisos(U).some(x => x.nivel === "error" || /coordinación|secretaría/.test(x.texto)));
-eq("Urgencias: pasos hechos", Object.entries(L.progreso(U)).filter(([, v]) => v).map(([k]) => k), ["1", "2", "4", "5"]);
-eq("Urgencias: sin paso pendiente en la entrega 1", L.pasoPendiente(U, 1), null);
+eq("Urgencias: pasos hechos", Object.entries(L.progreso(U)).filter(([, v]) => v).map(([k]) => k), ["1", "2", "4", "5", "6"]);
+eq("Urgencias: sin paso pendiente en la entrega 2", L.pasoPendiente(U, 2), null);
+
+// Priorización (entrega 2)
+const nums = l => l.map(f => f.num);
+eq("Prioridad por defecto: los 15 de mayor IPR", nums(L.prioritarios(U)), [10, 8, 5, 15, 29, 9, 23, 36, 45, 7, 16, 30, 43, 3, 11]);
+const avU = L.avisosPriorizar(U);
+t("Aviso: empatados con el último que quedan fuera", avU.some(x => /IPR \(180\)/.test(x.texto) && /nº 18, 22, 35, 37/.test(x.texto)));
+t("Urgencias: sin avisos de motivo", !avU.some(x => /motivo/.test(x.texto)));
+const U2 = JSON.parse(JSON.stringify(U));
+U2.prioridad = { modo: "umbral", n: "15", umbral: "250" };
+eq("Umbral IPR ≥ 250", nums(L.prioritarios(U2)), [10, 8, 5, 15, 29, 9, 23, 36, 45]);
+U2.prioridad.umbral = "";
+t("Aviso: umbral vacío", L.avisosPriorizar(U2).some(x => /umbral/.test(x.texto)));
+const U3 = JSON.parse(JSON.stringify(U)), f6 = U3.fallos.find(f => f.num === 6), f10 = U3.fallos.find(f => f.num === 10);
+f6.critico = true; f10.manual = "no";
+let pr = L.prioridad(U3);
+eq("Crítico sube a prioritario", [pr[f6.id].prio, pr[f6.id].por, pr[f6.id].auto], [true, "critico", false]);
+eq("Quitado a mano", [pr[f10.id].prio, pr[f10.id].por, pr[f10.id].auto], [false, "manual", true]);
+const avU3 = L.avisosPriorizar(U3);
+t("Aviso: crítico sin motivo", avU3.some(x => x.fallo === f6.id && /crítico sin motivo/.test(x.texto)));
+t("Aviso: quitado a mano sin motivo", avU3.some(x => x.fallo === f10.id && /quitado a mano/.test(x.texto)));
+eq("Progreso 6 pendiente si faltan motivos", L.progreso(U3)[6], false);
+f6.motivoCritico = "Evento centinela"; f10.motivo = "Ya resuelto"; f10.manual = "no";
+eq("Progreso 6 con motivos", L.progreso(U3)[6], true);
+f10.critico = true;
+eq("Crítico gana a «quitado a mano»", L.prioridad(U3)[f10.id].prio, true);
+const g = L.nuevoAmfe("g", ""); g.fallos = [Object.assign(L.nuevoFallo("g1", 1), { fallo: "Muy grave raro", g: "10", o: "1", d: "1" }), Object.assign(L.nuevoFallo("g2", 2), { fallo: "Rojo detectable", g: "9", o: "10", d: "1" }), ...Array.from({ length: 3 }, (_, i) => Object.assign(L.nuevoFallo("g" + (i + 3), i + 3), { fallo: "Otro " + i, g: "5", o: "5", d: "8" }))];
+g.prioridad.n = "2";
+const avG = L.avisosPriorizar(g);
+t("Aviso: gravedad 9–10 no prioritario", avG.some(x => x.fallo === "g1" && /gravedad 10/.test(x.texto)));
+t("Aviso: zona roja no prioritaria", avG.some(x => x.fallo === "g2" && /zona roja/.test(x.texto)));
+g.prioridad.n = "50";
+t("Aviso: N mayor que los fallos", L.avisosPriorizar(g).some(x => /entran todos/.test(x.texto)));
+eq("Motivo propuesto", L.sugerirMotivo(U, U.fallos.find(f => f.num === 10)), "IPR 343 (puesto 1 de 49); zona naranja de la matriz de riesgos (riesgo alto).");
+t("Motivo propuesto: sin controles y grave", /gravedad 10.*sin controles/.test(L.sugerirMotivo(g, g.fallos[0])));
+
+// Matriz
+const M10 = L.matriz(L.prioritarios(U), 10), M5 = L.matriz(L.prioritarios(U), 5);
+eq("Matriz 10×10: tamaño", [M10.length, M10[0].length, M10[0][0].g, M10[0][0].o], [10, 10, 10, 1]);
+eq("Matriz 10×10: total", M10.flat().reduce((s, x) => s + x.fallos.length, 0), 15);
+eq("Matriz 10×10: casilla G7 O7", nums(M10[3][6].fallos), [10, 15]);
+eq("Matriz 10×10: zona G10 O10", M10[0][9].zona, "rojo");
+eq("Matriz 5×5: casilla G7–8 O7–8", nums(M5[1][3].fallos), [10, 8, 15]);
+eq("Matriz 5×5: zonas de la primera fila", M5[0].map(x => x.zona), ["amarillo", "naranja", "naranja", "naranja", "rojo"]);
+eq("Por subproceso", L.porSubproceso(U).map(s => s.prio), [3, 4, 2, 1, 2, 1, 2]);
+
+// Intercambio «amfe-fallos» v1
+const paq = JSON.parse(JSON.stringify(L.paqueteIntercambio([U], "2026.02", "2026-10-21T00:00:00Z")));
+const leido = L.leerIntercambio(paq);
+eq("Intercambio: cabecera", [paq.formato, paq.version, paq.app, leido.length], ["amfe-fallos", 1, "amfe", 1]);
+const pf10 = leido[0].fallos.find(f => f.num === 10);
+eq("Intercambio: fallo 10", [pf10.g, pf10.o, pf10.d, pf10.ipr, pf10.puesto, pf10.prioritario, pf10.motivoPrioridad, pf10.subproceso, pf10.zona], [7, 7, 7, 343, 1, true, "top", "Triaje de enfermería", "naranja"]);
+eq("Intercambio: 49 fallos, 15 prioritarios, escalas del curso", [leido[0].fallos.length, leido[0].fallos.filter(f => f.prioritario).length, leido[0].escalas, leido[0].criterio], [49, 15, "curso", { modo: "top", n: 15, umbral: null }]);
+eq("Intercambio: subprocesos con orden", leido[0].subprocesos.map(s => s.orden), [1, 2, 3, 4, 5, 6, 7]);
+eq("Intercambio: no prioritario sin motivo", leido[0].fallos.find(f => f.num === 6).motivoPrioridad, null);
+eq("Intercambio: versión desconocida", L.leerIntercambio(Object.assign({}, paq, { version: 2 })), null);
+eq("Intercambio: otro formato", L.leerIntercambio({ formato: "otra", version: 1, amfes: [] }), null);
+
+// Excel
+const libro = L.hojasExcel(U, "21/10/2026");
+eq("Excel: hojas", libro.hojas.map(h => h.nombre), ["AMFE", "Prioritarios", "Matriz", "Subprocesos", "Equipo y sesiones", "Escalas"]);
+eq("Excel: filas de la hoja AMFE (3 de cabecera + 49)", libro.hojas[0].filas.length, 52);
+eq("Excel: filas de prioritarios", libro.hojas[1].filas.length, 18);
+eq("Excel: casilla G7 O7 de la matriz", [libro.hojas[2].filas[5][7].texto, libro.hojas[2].filas[5][7].estilo], ["10, 15", "z_naranja"]);
+const bytes = X.construirLibroXlsx(libro);
+t("Excel: se construye (ZIP)", bytes.length > 5000 && bytes[0] === 0x50 && bytes[1] === 0x4b);
+const estilosUsados = new Set(libro.hojas.flatMap(h => h.filas.flat().map(x => x && x.estilo).filter(Boolean)));
+t("Excel: todos los estilos existen", [...estilosUsados].every(e => e in libro.estilos));
+
+// Saneado de los campos nuevos
+const S2 = L.sanearDatos({ amfes: [{ id: "q", prioridad: { modo: "raro", n: 7 }, fallos: [{ id: "f", num: 1, fallo: "x", critico: "si", manual: "quizá" }] }] }, gid, "");
+eq("Saneado: prioridad", S2.amfes[0].prioridad, { modo: "top", n: "7", umbral: "200" });
+eq("Saneado: crítico y manual", [S2.amfes[0].fallos[0].critico, S2.amfes[0].fallos[0].manual], [false, ""]);
 
 // Contenido
 eq("Aprende: 7 temas", C.TEMAS.length, 7);

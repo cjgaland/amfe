@@ -1106,11 +1106,12 @@ body.ver-informe .doc-salto { border: 0; margin: 0; break-after: page; }
    Componentes propios de AMFE
    ============================================================ */
 
-/* Colores de subproceso (como en la matriz del curso: cada subproceso, su color) */
-.sub-c0 { --sc: #2563eb; } .sub-c1 { --sc: #7c3aed; } .sub-c2 { --sc: #db2777; } .sub-c3 { --sc: #9f1239; }
-.sub-c4 { --sc: #0891b2; } .sub-c5 { --sc: #ea580c; } .sub-c6 { --sc: #6d5a8a; } .sub-c7 { --sc: #4d7c0f; } .sub-cx { --sc: #94a3b8; }
-:root[data-tema="oscuro"] .sub-c0 { --sc: #60a5fa; } :root[data-tema="oscuro"] .sub-c1 { --sc: #a78bfa; } :root[data-tema="oscuro"] .sub-c2 { --sc: #f472b6; } :root[data-tema="oscuro"] .sub-c3 { --sc: #fb7185; }
-:root[data-tema="oscuro"] .sub-c4 { --sc: #22d3ee; } :root[data-tema="oscuro"] .sub-c5 { --sc: #fb923c; } :root[data-tema="oscuro"] .sub-c6 { --sc: #b8a6d9; } :root[data-tema="oscuro"] .sub-c7 { --sc: #a3e635; }
+/* Colores de subproceso (como en la matriz del curso: cada subproceso, su color). Sin verdes, amarillos,
+   naranjas ni rojos, para no confundirse con las zonas de la matriz */
+.sub-c0 { --sc: #2563eb; } .sub-c1 { --sc: #7c3aed; } .sub-c2 { --sc: #c026d3; } .sub-c3 { --sc: #0f766e; }
+.sub-c4 { --sc: #475569; } .sub-c5 { --sc: #92400e; } .sub-c6 { --sc: #1e3a8a; } .sub-c7 { --sc: #0284c7; } .sub-cx { --sc: #94a3b8; }
+:root[data-tema="oscuro"] .sub-c0 { --sc: #60a5fa; } :root[data-tema="oscuro"] .sub-c1 { --sc: #a78bfa; } :root[data-tema="oscuro"] .sub-c2 { --sc: #e879f9; } :root[data-tema="oscuro"] .sub-c3 { --sc: #2dd4bf; }
+:root[data-tema="oscuro"] .sub-c4 { --sc: #94a3b8; } :root[data-tema="oscuro"] .sub-c5 { --sc: #d6a35c; } :root[data-tema="oscuro"] .sub-c6 { --sc: #818cf8; } :root[data-tema="oscuro"] .sub-c7 { --sc: #38bdf8; }
 .sub-dot { display: inline-block; flex: none; width: 12px; height: 12px; border-radius: 50%; background: var(--sc); vertical-align: -1px; margin-right: 6px; }
 .sub-fill { fill: var(--sc); }
 
@@ -1162,3 +1163,62 @@ body.ver-informe .doc-salto { border: 0; margin: 0; break-after: page; }
 .tabla-amfe { min-width: 980px; }
 body.ver-informe .tabla-amfe { min-width: 0; font-size: 11.5px; }
 @media print { .tabla-amfe { min-width: 0; font-size: 10px; } }
+
+/* ---------- Paso 6 · Priorizar ---------- */
+.criterio-res { margin: 8px 0 2px; font-size: 14.5px; }
+.seg + .field { margin-top: 12px; }
+/* Zonas de la matriz (las del Documento Final del curso) */
+.mz--verde { background: #bbf7d0; } .mz--amarillo { background: #fef08a; } .mz--naranja { background: #fed7aa; } .mz--rojo { background: #fca5a5; }
+:root[data-tema="oscuro"] .mz--verde { background: #1f5a3a; } :root[data-tema="oscuro"] .mz--amarillo { background: #6b5d12; }
+:root[data-tema="oscuro"] .mz--naranja { background: #7a3d14; } :root[data-tema="oscuro"] .mz--rojo { background: #8a1c32; }
+:root[data-tema="oscuro"] .mz-f { color: #0d1b2a; }
+.zona-b { display: inline-flex; padding: 2px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 800; color: #1f2937; }
+.zona-b.zona--verde { background: #bbf7d0; } .zona-b.zona--amarillo { background: #fef08a; } .zona-b.zona--naranja { background: #fed7aa; } .zona-b.zona--rojo { background: #fca5a5; }
+.badge--grave { background: var(--red-dim); color: var(--red); border-color: rgba(190,18,60,.35); }
+.mz-ctl { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.mz-ctl .seg { flex: 0 1 auto; }
+.mz-wrap { display: grid; grid-template-columns: 18px minmax(0, 1fr); grid-template-rows: auto auto; gap: 2px 4px; }
+.mz-eje-g { grid-row: 1; writing-mode: vertical-rl; transform: rotate(180deg); text-align: center; font-size: 11px; font-weight: 800; letter-spacing: .8px; text-transform: uppercase; color: var(--text-2); }
+.mz-eje-o { grid-column: 2; text-align: center; font-size: 11px; font-weight: 800; letter-spacing: .8px; text-transform: uppercase; color: var(--text-2); }
+.mz { display: grid; gap: 2px; }
+.mz--10 { grid-template-columns: 22px repeat(10, minmax(0, 1fr)); }
+.mz--5 { grid-template-columns: 34px repeat(5, minmax(0, 1fr)); }
+.mz-n { display: grid; place-items: center; font-size: 11px; font-weight: 800; color: var(--text-2); }
+.mz-n--o { padding-top: 2px; }
+.mz-c { min-height: 30px; padding: 2px; border-radius: 4px; display: flex; flex-wrap: wrap; align-content: center; justify-content: center; gap: 2px; }
+.mz--5 .mz-c { min-height: 52px; gap: 3px; padding: 4px; }
+.mz-f { min-width: 22px; height: 20px; padding: 0 3px; border: 0; border-radius: 4px; background: var(--sc); color: #fff; font: 800 11px var(--font); cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,.25); }
+.mz-f--no { opacity: .45; }
+@media (min-width: 620px) { .mz-c { min-height: 38px; } .mz-f { min-width: 26px; height: 22px; font-size: 12px; } .mz--5 .mz-c { min-height: 70px; } }
+.leyenda i.mz--verde, .leyenda i.mz--amarillo, .leyenda i.mz--naranja, .leyenda i.mz--rojo { border: 1px solid rgba(0,0,0,.15); }
+/* Lista de fallos para priorizar */
+.pf-lista { display: grid; gap: 8px; margin: 10px 0; }
+.pf { padding: 10px 12px 4px; border-radius: var(--radius-lg); border: 1px solid var(--border); border-left: 5px solid var(--sc); background: var(--bg-2); box-shadow: var(--shadow-sm); scroll-margin-top: 80px; }
+.pf--on { box-shadow: 0 0 0 2px var(--cyan-glow), var(--shadow-sm); }
+.pf--flash { animation: pfFlash 1.4s ease-out; }
+@keyframes pfFlash { 0%, 30% { background: var(--cyan-dim); } 100% { background: var(--bg-2); } }
+.pf-cab { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 4px 8px; }
+.pf-txt { flex: 1 1 220px; min-width: 0; display: grid; gap: 2px; font-size: 14.5px; line-height: 1.3; }
+.pf-txt > span { font-size: 12.5px; color: var(--text-2); }
+.pf-badges { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.pf-acc { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 8px 0 6px; }
+.pf-btn { min-height: 34px; padding: 5px 12px; border-radius: 999px; border: 1.5px solid var(--border-lite); background: var(--bg-3); color: var(--text-2); font: 700 13.5px var(--font); cursor: pointer; }
+.pf-btn.on { background: var(--cyan); border-color: var(--cyan); color: #fff; }
+:root[data-tema="oscuro"] .pf-btn.on { color: #2a1405; }
+.pf-btn:disabled { cursor: default; opacity: .85; }
+.pf-por { font-size: 12.5px; color: var(--text-3); font-weight: 600; }
+.pf-crit { display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 700; color: var(--text-2); margin-left: auto; }
+.pf-crit input { width: 18px; height: 18px; accent-color: var(--red); }
+.pf > [data-zav] > .warn, .pf > [data-zav] > .note { margin: 6px 0; font-size: 13.5px; }
+/* Priorización por subprocesos */
+.tabla-porsub td:first-child { white-space: nowrap; }
+.barra { display: block; width: 100%; min-width: 60px; height: 10px; border-radius: 99px; background: var(--bg-3); overflow: hidden; }
+.barra i { display: block; height: 100%; background: var(--sc); border-radius: 99px; }
+@media (max-width: 480px) { .col-barra { display: none; } }
+@media print { .pf-acc { display: none; } .mz-f { box-shadow: none; } }
+/* En la vista de informe y al imprimir, siempre los colores claros */
+:root body.ver-informe .mz--verde, :root body.ver-informe .zona-b.zona--verde { background: #bbf7d0; } :root body.ver-informe .mz--amarillo { background: #fef08a; }
+:root body.ver-informe .mz--naranja { background: #fed7aa; } :root body.ver-informe .mz--rojo { background: #fca5a5; }
+:root body.ver-informe .mz-f { color: #fff; }
+:root body.ver-informe .sub-c0 { --sc: #2563eb; } :root body.ver-informe .sub-c1 { --sc: #7c3aed; } :root body.ver-informe .sub-c2 { --sc: #c026d3; } :root body.ver-informe .sub-c3 { --sc: #0f766e; }
+:root body.ver-informe .sub-c4 { --sc: #475569; } :root body.ver-informe .sub-c5 { --sc: #92400e; } :root body.ver-informe .sub-c6 { --sc: #1e3a8a; } :root body.ver-informe .sub-c7 { --sc: #0284c7; }

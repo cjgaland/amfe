@@ -1,8 +1,10 @@
 // ============================================================
 //  logic.js — Lógica PURA (sin DOM) · AMFE
 //  Modelo del AMFE (proceso, subprocesos, equipo, sesiones, fallos), escalas
-//  G·O·D, IPR y orden, zonas de la matriz, avisos didácticos por paso, textos
-//  propuestos, progreso, pegar desde Excel, saneado por esquema y fusión.
+//  G·O·D, IPR y orden, priorización (N primeros o umbral, gravedad 9–10, fallo
+//  crítico, decisión manual), matriz de riesgos, avisos didácticos por paso,
+//  textos propuestos, progreso, pegar desde Excel, paquete de intercambio
+//  «amfe-fallos» para otras apps, hojas de Excel, saneado por esquema y fusión.
 //  window.Logica en navegador y module.exports en Node (tests).
 // ============================================================
 (function (raiz) {
@@ -133,13 +135,16 @@
   const COLORES_SUB = 8;   // número de colores de subproceso (styles.css: .sub-c0 … .sub-c7)
   function nuevoAmfe(id, fecha) {
     return { id, titulo: "", proceso: "", unidad: "", objetivo: "", inicio: "", fin: "", incluye: "", excluye: "", responsable: "", fecha: "",
-      subprocesos: [], equipo: [], sesiones: [], fallos: [], escalas: nuevasEscalas(), notas: "", creado: fecha, modificado: fecha };
+      subprocesos: [], equipo: [], sesiones: [], fallos: [], escalas: nuevasEscalas(), prioridad: nuevaPrioridad(), notas: "", creado: fecha, modificado: fecha };
   }
+  // Criterio de prioridad: los N de mayor IPR (15, como el curso) o los que superan un umbral de IPR
+  const nuevaPrioridad = () => ({ modo: "top", n: "15", umbral: "200" });
   const nuevasEscalas = () => ({ g: ESCALAS_CURSO.g.slice(), o: ESCALAS_CURSO.o.slice(), d: ESCALAS_CURSO.d.slice() });
   function nuevoSubproceso(id, color = 0) { return { id, nombre: "", descripcion: "", inicio: "", fin: "", roles: "", color: String(color % COLORES_SUB) }; }
   function nuevoMiembro(id) { return { id, perfil: "", cargo: "", rol: "miembro", justificacion: "", nombre: "" }; }
   function nuevaSesion(id) { return { id, fecha: "", actividad: "", duracion: "", asistentes: [], resultados: "" }; }
-  function nuevoFallo(id, n = 0) { return { id, num: n, subprocesoId: "", fallo: "", efecto: "", causa: "", controles: "", g: "", o: "", d: "" }; }
+  // manual: "" = lo decide el criterio; "si" / "no" = el equipo lo marca o lo desmarca a mano (con motivo)
+  function nuevoFallo(id, n = 0) { return { id, num: n, subprocesoId: "", fallo: "", efecto: "", causa: "", controles: "", g: "", o: "", d: "", critico: false, motivoCritico: "", manual: "", motivo: "" }; }
   const siguienteNum = a => a.fallos.reduce((m, f) => Math.max(m, Number(f.num) || 0), 0) + 1;
   // Color libre para un subproceso nuevo (el primero que no se use)
   function colorLibre(a) {
@@ -269,7 +274,86 @@
     return A.map(x => Object.assign({ paso: 5 }, x));
   }
 
-  function avisos(a) { return [...avisosProceso(a), ...avisosEquipo(a), ...avisosFallos(a), ...avisosPuntuar(a)]; }
+  // ---------- Priorizar (paso 6) ----------
+  const nPrioridad = a => { const n = num(a.prioridad.n); return Number.isInteger(n) && n >= 1 ? Math.min(n, 500) : 15; };
+  const umbralPrioridad = a => { const u = num(a.prioridad.umbral); return Number.isFinite(u) && u >= 1 ? u : null; };
+  // Estado de prioridad de cada fallo con texto: { prio, auto (lo elige el criterio), por: "criterio"|"critico"|"manual"|"", grave (G 9–10), zona }
+  function prioridad(a) {
+    const F = a.fallos.filter(f => lleno(f.fallo)), orden = ordenarFallos(F.filter(iprDe)), base = new Set();
+    if (a.prioridad.modo === "umbral") { const u = umbralPrioridad(a); if (u) orden.filter(f => iprDe(f) >= u).forEach(f => base.add(f.id)); }
+    else orden.slice(0, nPrioridad(a)).forEach(f => base.add(f.id));
+    const m = {};
+    F.forEach(f => {
+      const auto = base.has(f.id);
+      let prio = auto, por = auto ? "criterio" : "";
+      if (f.critico) { prio = true; por = "critico"; }
+      if (f.manual === "si") { prio = true; if (!f.critico) por = "manual"; }
+      if (f.manual === "no" && !f.critico) { prio = false; por = "manual"; }
+      m[f.id] = { prio, auto, por, grave: (entero1a10(f.g) || 0) >= 9, zona: zonaMatriz(f.g, f.o) };
+    });
+    return m;
+  }
+  const prioritarios = a => { const m = prioridad(a); return ordenarFallos(a.fallos.filter(f => m[f.id] && m[f.id].prio)); };
+  const POR_TXT = { criterio: "Criterio de IPR", critico: "Fallo crítico", manual: "Decisión del equipo" };
+  // Propone el motivo de prioridad a partir del IPR, el puesto, la gravedad y la zona de la matriz
+  function sugerirMotivo(a, f) {
+    const v = iprDe(f), P = puestos(a.fallos), g = entero1a10(f.g), z = zonaMatriz(f.g, f.o), partes = [];
+    if (v) partes.push(`IPR ${v} (puesto ${P[f.id]} de ${a.fallos.filter(iprDe).length})`);
+    if (g >= 9) partes.push(`gravedad ${g}: el daño posible es muy grave aunque el IPR no sea de los primeros`);
+    if (z === "rojo" || z === "naranja") partes.push(`zona ${z} de la matriz de riesgos (riesgo ${ZONAS[z].nom.toLowerCase()})`);
+    if (!lleno(f.controles)) partes.push("sin controles actuales que lo eviten o lo detecten");
+    return partes.length ? partes.join("; ").replace(/^./, x => x.toUpperCase()) + "." : "";
+  }
+  function avisosPriorizar(a) {
+    const A = [], F = a.fallos.filter(f => lleno(f.fallo)), P = F.filter(iprDe), m = prioridad(a);
+    if (!P.length) { A.push({ nivel: "nota", texto: "Primero puntúa los fallos (paso 5): sin IPR no se puede priorizar." }); return A.map(x => Object.assign({ paso: 6 }, x)); }
+    const sinPunt = F.length - P.length;
+    if (sinPunt) A.push({ nivel: "warn", texto: `${sinPunt === 1 ? "Queda un fallo" : "Quedan " + sinPunt + " fallos"} sin puntuar: no entran en la priorización por IPR.` });
+    if (a.prioridad.modo === "umbral" && !umbralPrioridad(a)) A.push({ nivel: "warn", texto: "Escribe el umbral de IPR (un número), o elige «los N de mayor IPR»." });
+    if (a.prioridad.modo !== "umbral") {
+      const orden = ordenarFallos(P), n = nPrioridad(a), ult = orden[n - 1];
+      if (ult && orden.length > n) {
+        const empatados = orden.slice(n).filter(f => iprDe(f) === iprDe(ult));
+        if (empatados.length) A.push({ nivel: "nota", texto: `${empatados.length === 1 ? "Un fallo tiene" : empatados.length + " fallos tienen"} el mismo IPR (${iprDe(ult)}) que el último de los ${n} y ${empatados.length === 1 ? "queda" : "quedan"} fuera (nº ${empatados.map(f => f.num).join(", ")}). A igual IPR la app pone antes el de más gravedad; si alguno os parece más importante, marcadlo a mano.` });
+      }
+      if (n >= P.length) A.push({ nivel: "nota", texto: `Con los ${n} primeros entran todos los fallos puntuados: así no se prioriza nada. Elige un número menor.` });
+    }
+    const pr = F.filter(f => m[f.id].prio), crit = F.filter(f => f.critico);
+    if (crit.length && pr.length >= 3 && crit.length > pr.length / 3) A.push({ nivel: "warn", texto: `Hay ${crit.length} fallos marcados como críticos de ${pr.length} prioritarios. Si se abusa de la marca «crítico», la priorización deja de ser objetiva: resérvala para lo que de verdad no puede esperar.` });
+    F.forEach(f => {
+      const e = m[f.id];
+      if (f.critico && !lleno(f.motivoCritico)) A.push({ nivel: "warn", fallo: f.id, texto: `Nº ${f.num} está marcado como crítico sin motivo. Escribe por qué (evento centinela, exigencia normativa, gravedad extrema…).` });
+      if (f.manual === "si" && !lleno(f.motivo)) A.push({ nivel: "warn", fallo: f.id, texto: `Nº ${f.num} se ha añadido a mano a los prioritarios: escribe el motivo.` });
+      if (f.manual === "no" && !lleno(f.motivo)) A.push({ nivel: "warn", fallo: f.id, texto: `Nº ${f.num} tiene IPR ${iprDe(f)} y se ha quitado a mano de los prioritarios: escribe el motivo.` });
+      if (e.grave && !e.prio) A.push({ nivel: "warn", fallo: f.id, texto: `Nº ${f.num} tiene gravedad ${f.g} y no es prioritario. Un fallo muy grave merece atención aunque sea raro o fácil de detectar: valora marcarlo.` });
+      if (e.zona === "rojo" && !e.prio) A.push({ nivel: "warn", fallo: f.id, texto: `Nº ${f.num} cae en la zona roja de la matriz (gravedad y ocurrencia muy altas) pero no es prioritario, porque su detección es baja. ¿Seguro que se detecta a tiempo?` });
+    });
+    if (!pr.length) A.push({ nivel: "nota", texto: "No hay ningún fallo prioritario con el criterio actual." });
+    return A.map(x => Object.assign({ paso: 6 }, x));
+  }
+
+  // Matriz G × O: celdas con los fallos que caen en cada una. tam = 10 (valor exacto) o 5 (tramos de dos puntos)
+  // Devuelve filas de gravedad alta a baja; cada celda { g, o, zona, fallos: [...] }
+  function matriz(fallos, tam = 10) {
+    const filas = [];
+    for (let g = tam; g >= 1; g--) {
+      const fila = [];
+      for (let o = 1; o <= tam; o++) {
+        const gv = tam === 10 ? g : g * 2, ov = tam === 10 ? o : o * 2;
+        fila.push({ g, o, zona: zonaMatriz(gv, ov), fallos: fallos.filter(f => { const fg = entero1a10(f.g), fo = entero1a10(f.o); return fg && fo && (tam === 10 ? fg === g && fo === o : tramo(fg) === g && tramo(fo) === o); }) });
+      }
+      filas.push(fila);
+    }
+    return filas;
+  }
+  // Por subproceso: nº de fallos, prioritarios, IPR máximo y medio
+  function porSubproceso(a) {
+    const m = prioridad(a), F = a.fallos.filter(f => lleno(f.fallo));
+    return a.subprocesos.map(s => { const l = F.filter(f => f.subprocesoId === s.id), v = l.map(iprDe).filter(Boolean);
+      return { id: s.id, nombre: s.nombre, color: s.color, n: l.length, prio: l.filter(f => m[f.id].prio).length, max: v.length ? Math.max(...v) : 0, media: v.length ? Math.round(v.reduce((x, y) => x + y, 0) / v.length) : 0 }; });
+  }
+
+  function avisos(a) { return [...avisosProceso(a), ...avisosEquipo(a), ...avisosFallos(a), ...avisosPuntuar(a), ...avisosPriorizar(a)]; }
 
   // ---------- Resumen y progreso ----------
   function resumen(a) {
@@ -287,7 +371,8 @@
       3: false,
       4: F.length >= 1 && F.every(f => subDe(a, f)),
       5: F.length >= 1 && F.every(f => iprDe(f)),
-      6: false, 7: false, 8: false
+      6: F.length >= 1 && F.every(f => iprDe(f)) && prioritarios(a).length >= 1 && !avisosPriorizar(a).some(x => x.nivel === "warn" && x.fallo && /motivo/.test(x.texto)),
+      7: false, 8: false
     };
   }
   // Primer paso disponible sin terminar (o el último disponible si todo está hecho)
@@ -300,7 +385,8 @@
     1: a => lleno(a.proceso) ? `Divide «${corto(a.proceso, 50)}» en subprocesos, con su inicio, su fin y quién interviene.` : "Describe el proceso que vais a analizar y divídelo en subprocesos.",
     2: () => "Forma el equipo del AMFE (al menos 6 perfiles distintos) y planifica las sesiones.",
     4: a => a.fallos.length ? "Completa los fallos: cada uno en su subproceso, con su efecto, su causa y los controles actuales." : "Escribe los fallos de cada subproceso: ¿qué puede salir mal en cada paso?",
-    5: a => { const n = a.fallos.filter(f => lleno(f.fallo) && !iprDe(f)).length; return `Puntúa la gravedad, la ocurrencia y la detección de ${n === 1 ? "el fallo que queda" : "los " + n + " fallos que quedan"}.`; }
+    5: a => { const n = a.fallos.filter(f => lleno(f.fallo) && !iprDe(f)).length; return `Puntúa la gravedad, la ocurrencia y la detección de ${n === 1 ? "el fallo que queda" : "los " + n + " fallos que quedan"}.`; },
+    6: a => prioritarios(a).length ? "Revisa los fallos prioritarios: escribe el motivo de los que habéis marcado o desmarcado a mano y de los críticos." : "Elige los fallos prioritarios: los de mayor IPR, los muy graves y los críticos. Mira la matriz de riesgos."
   };
   function siguientePaso(datos, entrega) {
     const L = datos.amfes;
@@ -308,7 +394,7 @@
     const a = L.slice().sort((x, y) => String(y.modificado).localeCompare(String(x.modificado)))[0];
     const p = pasoPendiente(a, entrega), nom = corto(a.titulo || a.proceso || "tu AMFE", 50);
     if (p) return { k: "paso" + p.n, texto: `«${nom}»: ${TEXTO_PASO[p.n](a)}`, href: `#/amfe/${a.id}/${p.n}`, btn: `Ir al paso ${p.n}` };
-    return { k: "listo", texto: `«${nom}» tiene todos sus fallos puntuados. La priorización con la matriz de riesgos y las acciones de mejora llegan en la próxima versión; mientras, revisa el orden por IPR.`, href: `#/amfe/${a.id}/5`, btn: "Ver el orden por IPR" };
+    return { k: "listo", texto: `«${nom}» tiene ${plural(prioritarios(a).length, "fallo prioritario", "fallos prioritarios")}. Las acciones de mejora llegan en la próxima versión; mientras, puedes sacar el Excel con la tabla, los prioritarios y la matriz.`, href: `#/amfe/${a.id}/6`, btn: "Ver la priorización" };
   }
 
   // ---------- Pegar una tabla desde Excel/Calc/Word ----------
@@ -361,6 +447,101 @@
     return nuevosSub;
   }
 
+  // ---------- Paquete de intercambio «amfe-fallos» (para «Traer de AMFE» en Mapa de Riesgos y Auditorías) ----------
+  // Forma FIJA y versionada (Diseño, 5.3): las otras apps leen esto, nunca «amfe-datos». Añadir campos no sube la
+  // versión; quitar o cambiar el significado de uno sí (y entonces se escriben las dos versiones durante un tiempo).
+  const FORMATO_INTERCAMBIO = "amfe-fallos", VERSION_INTERCAMBIO = 1;
+  const numONull = v => entero1a10(v) || null;
+  const mismasEscalas = e => ["g", "o", "d"].every(k => e[k].every((t, i) => t === ESCALAS_CURSO[k][i]));
+  function paqueteIntercambio(amfes, appVersion, fecha) {
+    return {
+      formato: FORMATO_INTERCAMBIO, version: VERSION_INTERCAMBIO, app: "amfe", appVersion, generado: fecha,
+      amfes: amfes.map(a => {
+        const m = prioridad(a), P = puestos(a.fallos), modo = a.prioridad.modo === "umbral" ? "umbral" : "top";
+        return {
+          id: a.id, titulo: a.titulo || a.proceso, proceso: a.proceso, unidad: a.unidad, fecha: a.fecha, edicion: "",
+          escalas: mismasEscalas(a.escalas) ? "curso" : { g: a.escalas.g.slice(), o: a.escalas.o.slice(), d: a.escalas.d.slice() },
+          criterio: { modo, n: modo === "top" ? nPrioridad(a) : null, umbral: modo === "umbral" ? umbralPrioridad(a) : null },
+          subprocesos: a.subprocesos.map((s, i) => ({ id: s.id, orden: i + 1, nombre: s.nombre, inicio: s.inicio, fin: s.fin, roles: s.roles })),
+          fallos: ordenarFallos(a.fallos.filter(f => lleno(f.fallo)), "sub", a.subprocesos).map(f => {
+            const e = m[f.id];
+            return { id: f.id, num: f.num, subprocesoId: f.subprocesoId, subproceso: nombreSub(a, f), fallo: f.fallo, efecto: f.efecto, causa: f.causa, controles: f.controles,
+              g: numONull(f.g), o: numONull(f.o), d: numONull(f.d), ipr: iprDe(f), puesto: P[f.id] || null,
+              prioritario: e.prio, motivoPrioridad: !e.prio ? null : e.por === "criterio" ? modo : e.por, motivo: f.critico ? f.motivoCritico : f.motivo,
+              critico: f.critico, grave: e.grave, zona: e.zona, acciones: [], residual: null };
+          })
+        };
+      })
+    };
+  }
+  // Lo que hará la app que recibe: comprobar formato y versión antes de usar nada (aquí sirve para los tests y de modelo)
+  function leerIntercambio(o) {
+    if (!o || typeof o !== "object" || o.formato !== FORMATO_INTERCAMBIO || o.version !== VERSION_INTERCAMBIO || !Array.isArray(o.amfes)) return null;
+    return o.amfes.filter(x => x && typeof x === "object" && Array.isArray(x.fallos));
+  }
+
+  // ---------- Excel ----------
+  const ESTILOS_XLSX = {
+    titulo: { negrita: true, tamano: 14, colorTexto: "FFFFFF", colorFondo: "9A3F06", borde: false },
+    sub: { cursiva: true, colorTexto: "444444", borde: false },
+    cab: { negrita: true, colorTexto: "FFFFFF", colorFondo: "0D1B2A", alineacion: "center", ajustarTexto: true },
+    celda: { ajustarTexto: true, vertical: "top" },
+    negrita: { negrita: true, ajustarTexto: true, vertical: "top" },
+    centro: { alineacion: "center", vertical: "top", ajustarTexto: true },
+    muyalto: { negrita: true, alineacion: "center", vertical: "top", colorFondo: "FFE4E6", colorTexto: "881337" },
+    alto: { negrita: true, alineacion: "center", vertical: "top", colorFondo: "FFEDD5", colorTexto: "9A3412" },
+    medio: { alineacion: "center", vertical: "top", colorFondo: "FEF3C7", colorTexto: "92400E" },
+    bajo: { alineacion: "center", vertical: "top", colorFondo: "DCFCE7", colorTexto: "14532D" },
+    prio: { negrita: true, alineacion: "center", vertical: "top", colorTexto: "9A3F06" },
+    z_verde: { alineacion: "center", vertical: "center", ajustarTexto: true, negrita: true, colorFondo: "BBF7D0" },
+    z_amarillo: { alineacion: "center", vertical: "center", ajustarTexto: true, negrita: true, colorFondo: "FEF08A" },
+    z_naranja: { alineacion: "center", vertical: "center", ajustarTexto: true, negrita: true, colorFondo: "FED7AA" },
+    z_rojo: { alineacion: "center", vertical: "center", ajustarTexto: true, negrita: true, colorFondo: "FECACA" },
+    eje: { negrita: true, alineacion: "center", vertical: "center", colorFondo: "E2E8F0" }
+  };
+  function hojasExcel(a, fecha) {
+    const T = (texto, estilo = "celda") => ({ texto: texto == null ? "" : String(texto), estilo });
+    const nom = a.titulo || a.proceso || "AMFE", m = prioridad(a), P = puestos(a.fallos);
+    const cabecera = (titulo, cols) => { const f = [[T(titulo, "titulo")], [T([a.unidad, a.proceso !== nom ? a.proceso : "", "Exportado de la app AMFE · " + fecha].filter(lleno).join(" · "), "sub")], cols.map(x => T(x, "cab"))]; f[0][0].combinar = cols.length; return f; };
+    const iprCelda = f => { const v = iprDe(f), n = nivelIPR(v); return v ? { numero: v, estilo: n.k } : T("", "centro"); };
+    const motivoDe = f => { const e = m[f.id]; if (!e || !e.prio) return f.manual === "no" ? "Quitado a mano: " + f.motivo : ""; return e.por === "critico" ? "Fallo crítico: " + f.motivoCritico : e.por === "manual" ? "Decisión del equipo: " + f.motivo : (a.prioridad.modo === "umbral" ? `IPR ≥ ${umbralPrioridad(a)}` : `Entre los ${nPrioridad(a)} de mayor IPR`); };
+    const F = ordenarFallos(a.fallos.filter(f => lleno(f.fallo)), "sub", a.subprocesos);
+    // 1. Tabla AMFE completa
+    const c1 = ["Nº", "Subproceso", "Modo de fallo", "Efecto", "Causa", "Controles actuales", "G", "O", "D", "IPR", "Puesto", "Nivel", "Zona de la matriz", "Prioritario", "Motivo de prioridad"];
+    const h1 = cabecera("AMFE · " + nom, c1);
+    F.forEach(f => { const e = m[f.id], v = iprDe(f); h1.push([T(f.num, "centro"), T(nombreSub(a, f)), T(f.fallo, "negrita"), T(f.efecto), T(f.causa), T(f.controles), T(f.g, "centro"), T(f.o, "centro"), T(f.d, "centro"), iprCelda(f), T(P[f.id] || "", "centro"), T(v ? nivelIPR(v).nom : "", "centro"), T(e.zona ? ZONAS[e.zona].nom : "", "centro"), T(e.prio ? "★" + (f.critico ? " crítico" : "") : "", "prio"), T(motivoDe(f))]); });
+    // 2. Prioritarios
+    const c2 = ["Puesto", "Nº", "Subproceso", "Modo de fallo", "Efecto", "Causa", "G", "O", "D", "IPR", "Motivo de prioridad"];
+    const h2 = cabecera("Fallos prioritarios · " + nom, c2);
+    prioritarios(a).forEach(f => h2.push([T(P[f.id] || "", "centro"), T(f.num, "centro"), T(nombreSub(a, f)), T(f.fallo, "negrita"), T(f.efecto), T(f.causa), T(f.g, "centro"), T(f.o, "centro"), T(f.d, "centro"), iprCelda(f), T(motivoDe(f))]));
+    // 3. Matriz 10 × 10 con los números de los fallos prioritarios
+    const h3 = [[T("Matriz de riesgos · fallos prioritarios (nº)", "titulo")], [T("Gravedad (filas, de 10 a 1) × Ocurrencia (columnas, de 1 a 10). Zonas: verde bajo, amarillo moderado, naranja alto, rojo muy alto.", "sub")]];
+    h3[0][0].combinar = 11;
+    const PR = a.fallos.filter(f => m[f.id] && m[f.id].prio);
+    matriz(PR, 10).forEach(fila => h3.push([T("G " + fila[0].g, "eje"), ...fila.map(cl => T(cl.fallos.map(f => f.num).join(", "), "z_" + cl.zona))]));
+    h3.push([T("", "eje"), ...Array.from({ length: 10 }, (_, i) => T("O " + (i + 1), "eje"))]);
+    // 4. Subprocesos
+    const c4 = ["Nº", "Subproceso", "Qué se hace", "Inicio", "Fin", "Roles", "Fallos", "Prioritarios", "IPR máximo", "IPR medio"];
+    const h4 = cabecera("Subprocesos · " + nom, c4), PS = porSubproceso(a);
+    a.subprocesos.forEach((s, i) => { const r = PS[i]; h4.push([T(i + 1, "centro"), T(s.nombre, "negrita"), T(s.descripcion), T(s.inicio), T(s.fin), T(s.roles), { numero: r.n, estilo: "centro" }, { numero: r.prio, estilo: "centro" }, r.max ? { numero: r.max, estilo: nivelIPR(r.max).k } : T("", "centro"), r.media ? { numero: r.media, estilo: "centro" } : T("", "centro")]); });
+    // 5. Equipo y sesiones
+    const h5 = cabecera("Equipo y sesiones · " + nom, ["Nº", "Perfil", "Cargo", "Papel", "Justificación", "Nombre"]);
+    a.equipo.forEach((x, i) => h5.push([T(i + 1, "centro"), T(x.perfil, "negrita"), T(x.cargo), T(ROLES[x.rol].nom), T(x.justificacion), T(x.nombre)]));
+    if (a.sesiones.length) { h5.push([]); h5.push(["Sesión", "Fecha", "Actividad", "Duración", "Asistentes", "Resultados"].map(x => T(x, "cab"))); a.sesiones.forEach((x, i) => h5.push([T(i + 1, "centro"), T(/^\d{4}-\d{2}-\d{2}$/.test(x.fecha) ? x.fecha.split("-").reverse().join("/") : x.fecha, "centro"), T(x.actividad), T(x.duracion, "centro"), T(x.asistentes.length, "centro"), T(x.resultados)])); }
+    // 6. Escalas
+    const h6 = cabecera("Escalas de puntuación", ["Puntos", "Gravedad", "Ocurrencia", "Detección"]);
+    TRAMOS.forEach((t, i) => h6.push([T(t, "centro"), T(a.escalas.g[i]), T(a.escalas.o[i]), T(a.escalas.d[i])]));
+    h6.push([]); h6.push([T("IPR = Gravedad × Ocurrencia × Detección (de 1 a 1.000). La detección va al revés: 10 = casi imposible de detectar.", "sub")]);
+    return { estilos: ESTILOS_XLSX, hojas: [
+      { nombre: "AMFE", filas: h1, opciones: { anchoColumnas: [6, 22, 34, 30, 30, 30, 5, 5, 5, 7, 8, 10, 12, 11, 34], congelar: { filas: 3, columnas: 0 }, altoFilas: { 1: 24 }, primera: true } },
+      { nombre: "Prioritarios", filas: h2, opciones: { anchoColumnas: [8, 6, 22, 34, 30, 30, 5, 5, 5, 7, 36], congelar: { filas: 3, columnas: 0 }, altoFilas: { 1: 24 } } },
+      { nombre: "Matriz", filas: h3, opciones: { anchoColumnas: [7, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11], altoFilas: Object.fromEntries(Array.from({ length: 10 }, (_, i) => [i + 3, 30])) } },
+      { nombre: "Subprocesos", filas: h4, opciones: { anchoColumnas: [5, 28, 34, 26, 26, 30, 8, 11, 10, 10], congelar: { filas: 3, columnas: 0 } } },
+      { nombre: "Equipo y sesiones", filas: h5, opciones: { anchoColumnas: [7, 32, 30, 22, 50, 22] } },
+      { nombre: "Escalas", filas: h6, opciones: { anchoColumnas: [9, 45, 45, 45] } }
+    ] };
+  }
+
   // ---------- Saneado por esquema (lo que se carga o se importa nunca se usa sin pasar por aquí) ----------
   // [max] = texto; "b" = sí/no; "id" = id propio; "ref" = id de otro objeto; "ent" = entero ≥ 0; {en} = enumerado;
   // {lista: max, max} = lista de textos; {lista, keepEmpty: n} = lista de longitud fija; {de: esquema, max} = lista de objetos; {obj: esquema} = objeto anidado
@@ -371,11 +552,12 @@
     subproceso: { id: "id", nombre: [200], descripcion: [1000], inicio: [300], fin: [300], roles: [500], color: { en: Array.from({ length: COLORES_SUB }, (_, i) => String(i)) } },
     miembro: { id: "id", perfil: [200], cargo: [200], rol: { en: Object.keys(ROLES) }, justificacion: [1000], nombre: [200] },
     sesion: { id: "id", fecha: [20], actividad: [500], duracion: [40], asistentes: { lista: "ref", max: 40 }, resultados: [1500] },
-    fallo: { id: "id", num: "ent", subprocesoId: "ref", fallo: [1000], efecto: [1000], causa: [1000], controles: [1000], g: [3], o: [3], d: [3] },
+    fallo: { id: "id", num: "ent", subprocesoId: "ref", fallo: [1000], efecto: [1000], causa: [1000], controles: [1000], g: [3], o: [3], d: [3], critico: "b", motivoCritico: [1000], manual: { en: ["", "si", "no"] }, motivo: [1000] },
+    prioridad: { modo: { en: ["top", "umbral"] }, n: [4], umbral: [5] },
     amfe: { id: "id", titulo: [200], proceso: [300], unidad: [200], objetivo: [2000], inicio: [300], fin: [300], incluye: [2000], excluye: [2000], responsable: [300], fecha: [40],
-      subprocesos: { de: "subproceso", max: 40 }, equipo: { de: "miembro", max: 40 }, sesiones: { de: "sesion", max: 40 }, fallos: { de: "fallo", max: 500 }, escalas: { obj: "escalas" }, notas: [3000], creado: [40], modificado: [40] }
+      subprocesos: { de: "subproceso", max: 40 }, equipo: { de: "miembro", max: 40 }, sesiones: { de: "sesion", max: 40 }, fallos: { de: "fallo", max: 500 }, escalas: { obj: "escalas" }, prioridad: { obj: "prioridad" }, notas: [3000], creado: [40], modificado: [40] }
   };
-  const FABRICA = { escalas: nuevasEscalas, subproceso: id => nuevoSubproceso(id), miembro: nuevoMiembro, sesion: nuevaSesion, fallo: id => nuevoFallo(id), amfe: id => nuevoAmfe(id, "") };
+  const FABRICA = { escalas: nuevasEscalas, prioridad: nuevaPrioridad, subproceso: id => nuevoSubproceso(id), miembro: nuevoMiembro, sesion: nuevaSesion, fallo: id => nuevoFallo(id), amfe: id => nuevoAmfe(id, "") };
   function sanear(esq, o, genId) {
     if (!o || typeof o !== "object" || Array.isArray(o)) return null;
     const S = ESQ[esq], r = FABRICA[esq](genId());
@@ -424,8 +606,10 @@
     ipr, iprDe, NIVELES_IPR, nivelIPR, ZONAS, zonaMatriz, ordenarFallos, puestos,
     PASOS, ROLES, ESTAMENTOS, ESTAMENTO_NOM, estamentoDe, PERFILES_SUG, SESIONES_TIPO, COLORES_SUB,
     nuevoAmfe, nuevasEscalas, nuevoSubproceso, nuevoMiembro, nuevaSesion, nuevoFallo, siguienteNum, colorLibre, subDe, nombreSub,
-    sugerirObjetivo, tipoRedaccion,
-    avisosProceso, avisosEquipo, avisosFallos, avisosPuntuar, avisos,
+    sugerirObjetivo, tipoRedaccion, nuevaPrioridad,
+    avisosProceso, avisosEquipo, avisosFallos, avisosPuntuar, avisosPriorizar, avisos,
+    nPrioridad, umbralPrioridad, prioridad, prioritarios, POR_TXT, sugerirMotivo, matriz, porSubproceso,
+    FORMATO_INTERCAMBIO, VERSION_INTERCAMBIO, paqueteIntercambio, leerIntercambio, ESTILOS_XLSX, hojasExcel,
     resumen, progreso, pasoPendiente, siguientePaso,
     parsearTabla, incorporarFilas,
     ESQ, sanear, sanearAmfe, sanearDatos, fusionar

@@ -108,10 +108,10 @@
         { t: "La matriz de riesgos", h: `<p>El eje vertical es la gravedad y el horizontal, la ocurrencia. Los fallos con gravedad y ocurrencia altas caen arriba a la derecha: la zona de mayor riesgo. La matriz no sustituye al IPR (no tiene en cuenta la detección), pero <b>comunica el riesgo de un vistazo</b>.</p>
           <p>Las zonas del curso: verde, riesgo bajo (aceptable); amarillo, moderado (vigilar); naranja, alto (intervenir); rojo, muy alto (intervenir ya).</p>` },
         { t: "El fallo «crítico»", h: `<p>Algunos sistemas añaden una marca Sí/No de <b>criticidad</b>: un fallo crítico pasa a los primeros puestos aunque su IPR sea bajo. Puede estar justificado (un evento centinela, una exigencia normativa), pero si se abusa de ella la priorización deja de ser objetiva. Escribid siempre el motivo.</p>
-          <p>En la app, la priorización y la matriz llegan en la próxima versión.</p>` }
+          <p>En la app, el paso 6 propone los 15 de mayor IPR (o un umbral), señala los de gravedad 9–10 y deja marcar los críticos o añadir y quitar fallos a mano, siempre con su motivo.</p>` }
       ],
       minicaso: `<p>De los 49 fallos de Urgencias, los 15 de mayor IPR van de 343 a 180. En la matriz quedan en las zonas naranja y amarilla: gravedad 6–8 y ocurrencia 6–7. Ninguno cae en la zona roja, pero ninguno es aceptable.</p>`,
-      practica: { texto: "Ver el orden por IPR del ejemplo", href: "#/amfe/ej-amfe-urg/5" } },
+      practica: { texto: "Ver la priorización del ejemplo", href: "#/amfe/ej-amfe-urg/6" } },
 
     { n: 7, c: "A", titulo: "Acciones de mejora y reevaluación", sub: "El AMFE termina cuando el riesgo baja",
       minuto: [
@@ -284,7 +284,8 @@
       { t: "1 · El proceso", s: "7 subprocesos con su inicio, fin y roles", href: "#/amfe/ej-amfe-urg/1" },
       { t: "2 · El equipo", s: "10 perfiles y 3 sesiones de trabajo", href: "#/amfe/ej-amfe-urg/2" },
       { t: "4 · Los fallos", s: "49 fallos con su efecto y su causa", href: "#/amfe/ej-amfe-urg/4" },
-      { t: "5 · La puntuación", s: "G·O·D e IPR: del 343 al 36", href: "#/amfe/ej-amfe-urg/5" }
+      { t: "5 · La puntuación", s: "G·O·D e IPR: del 343 al 36", href: "#/amfe/ej-amfe-urg/5" },
+      { t: "6 · La priorización", s: "Los 15 de mayor IPR y la matriz de riesgos", href: "#/amfe/ej-amfe-urg/6" }
     ]
   };
 

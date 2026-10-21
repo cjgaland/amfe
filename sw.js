@@ -4,7 +4,7 @@
 //  Al cambiar cualquier archivo, incrementa CACHE_NAME.
 // ============================================================
 
-const CACHE_NAME = "amfe-v1";
+const CACHE_NAME = "amfe-v2";
 
 const ASSETS = [
   "./",
@@ -12,6 +12,7 @@ const ASSETS = [
   "./styles.css",
   "./logic.js",
   "./contenido.js",
+  "./xlsx.js",
   "./app.js",
   "./manifest.json",
   "./icon-192.png",
