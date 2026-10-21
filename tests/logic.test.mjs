@@ -145,7 +145,7 @@ eq("Urgencias: zonas de la matriz de los 15", [...new Set(top15.map(f => L.zonaM
 eq("Urgencias: controles en los 15 primeros", top15.every(f => L.lleno(f.controles)), true);
 eq("Urgencias: ningún fallo parece causa o efecto", U.fallos.filter(f => L.tipoRedaccion(f.fallo)).length, 0);
 t("Urgencias: sin avisos de error ni de coordinación", !L.avisos(U).some(x => x.nivel === "error" || /coordinación|secretaría/.test(x.texto)));
-eq("Urgencias: pasos hechos (el 7 no: quedan 6 prioritarios sin acción para practicar)", Object.entries(L.progreso(U)).filter(([, v]) => v).map(([k]) => k), ["1", "2", "4", "5", "6", "8"]);
+eq("Urgencias: pasos hechos (el 7 no: quedan 6 prioritarios sin acción para practicar)", Object.entries(L.progreso(U)).filter(([, v]) => v).map(([k]) => k), ["1", "2", "3", "4", "5", "6", "8"]);
 eq("Urgencias: sin paso pendiente en la entrega 2", L.pasoPendiente(U, 2), null);
 eq("Urgencias: paso pendiente en la entrega 3", L.pasoPendiente(U, 3).n, 7);
 
@@ -284,6 +284,60 @@ const A3 = S3.amfes[0], x3 = A3.fallos[0].acciones[0];
 eq("Saneado: acción", [x3.que, x3.actuaSobre, x3.estado, x3.tipo, x3.indicador.nombre, x3.indicador.estandar, x3.comprobacion.medible, x3.comprobacion.factible], ["Hacer", ["o"], "pendiente", "correctora", "I", "", true, false]);
 eq("Saneado: residual y control", [A3.fallos[0].residual.g, A3.control.aprobado[0], A3.control.historial], ["5", { nombre: "X", cargo: "3" }, []]);
 eq("Saneado: AMFE sin control trae el control por defecto", L.sanearAmfe({ id: "k" }, gid, "").control.historial[0].cambio, "Documento inicial");
+
+// Entrega 4 · Lluvia de ideas y grupo nominal
+eq("Urgencias: ideas, bloques y votos", [U.ideas.length, U.bloques.length, U.tgn.votos.length], [26, 12, 15]);
+eq("Grupo nominal: recuento del ejercicio 3", L.ranking(U).slice(0, 8).map(r => r.total), [11, 6, 5, 2, 2, 2, 1, 1]);
+eq("Grupo nominal: primer bloque", L.ranking(U)[0].b.nombre, "Identificación del paciente");
+t("Aviso: bloques sin votos y sin comentario", (() => { const Z = JSON.parse(JSON.stringify(U)); Z.bloques.forEach(b => { b.comentario = ""; }); return L.avisosIdeas(Z).some(x => /ningún voto/.test(x.texto)); })());
+t("Ideas parecidas", L.parecidas("No se colocó la pulsera identificativa", "No se le colocó la pulsera identificativa al paciente"));
+t("Ideas distintas", !L.parecidas("Sala de espera muy fría", "No se corrigió el error en el apellido"));
+const T = L.nuevoAmfe("t", ""); T.equipo = [Object.assign(L.nuevoMiembro("m1"), { perfil: "Enfermera" }), Object.assign(L.nuevoMiembro("m2"), { perfil: "Médico" })];
+T.bloques = [L.nuevoBloque("b1", "A"), L.nuevoBloque("b2", "B"), L.nuevoBloque("b3", "C")];
+L.ponerVoto321(T, "m1", 3, "b1"); L.ponerVoto321(T, "m1", 2, "b2"); L.ponerVoto321(T, "m1", 3, "b2");
+eq("3-2-1: cambiar el 3 a un bloque que tenía el 2 lo mueve", [L.voto321(T, "m1", 3), L.voto321(T, "m1", 2)], ["b2", ""]);
+L.ponerVoto321(T, "m1", 2, "b1"); L.ponerVoto321(T, "m2", 3, "b1");
+eq("3-2-1: recuento", L.ranking(T).map(r => r.b.id + ":" + r.total), ["b1:5", "b2:3", "b3:0"]);
+t("Aviso: votos a medias", L.avisosIdeas(Object.assign(T, { ideas: [Object.assign(L.nuevaIdea("i1"), { texto: "x" })] })).some(x => /ha repartido 2 de sus 3 votos/.test(x.texto)));
+T.tgn.modo = "1a10"; T.tgn.votos = []; L.ponerVoto1a10(T, "m1", "b3", "9"); L.ponerVoto1a10(T, "m2", "b3", "8"); L.ponerVoto1a10(T, "m2", "b1", "12");
+eq("1 a 10: recuento", L.ranking(T)[0].b.id + ":" + L.ranking(T)[0].total, "b3:17");
+t("Aviso: voto 1 a 10 no válido", L.avisosIdeas(T).some(x => x.nivel === "error"));
+const I1 = Object.assign(L.nuevaIdea("i9", "s1"), { texto: "  Pulsera no colocada " }), T2 = L.nuevoAmfe("t2", ""); T2.ideas = [I1];
+const nf = L.ideaAFallo(T2, I1, () => "f9");
+eq("Idea → fallo", [nf.fallo, nf.subprocesoId, nf.num, I1.falloId, L.ideaAFallo(T2, I1, () => "otro")], ["Pulsera no colocada", "s1", 1, "f9", null]);
+
+// Votación de G·O·D por miembro
+const f10u = U.fallos.find(f => f.num === 10), mv = L.mediaVotos(f10u);
+eq("Media de los votos", [mv.g.media, mv.o.media, mv.d.media, mv.d.rango], [7, 7, 7, 4]);
+eq("Discrepancia en la detección", L.discrepancia(f10u), ["d"]);
+t("Aviso: votos muy separados", L.avisosPuntuar(U).some(x => x.fallo === f10u.id && /muy separados en detección/.test(x.texto)));
+const fv = L.nuevoFallo("fv", 1); L.ponerVotoGOD(fv, "m1", "g", "6"); L.ponerVotoGOD(fv, "m2", "g", "7");
+eq("Media redondeada (6,5 → 7)", L.mediaVotos(fv).g.media, 7);
+L.ponerVotoGOD(fv, "m2", "g", "");
+eq("Voto vacío se quita", fv.votos.length, 1);
+
+// Ediciones
+const E1 = L.nuevaEdicion(U, () => "ed1", "2026-11-04T10:00:00.000Z");
+eq("Nueva edición", [E1.id, E1.edicion, E1.anteriorId, E1.proxRevision, E1.control.historial.slice(-1)[0].edicion, E1.fallos.length], ["ed1", "01", "ej-amfe-urg", "", "01", 49]);
+const e10 = E1.fallos.find(f => f.num === 10); e10.o = "4"; e10.d = "3";
+E1.fallos = E1.fallos.filter(f => f.num !== 6); E1.fallos.push(Object.assign(L.nuevoFallo("fnuevo", 50), { fallo: "Nuevo", g: "5", o: "5", d: "5" }));
+const cmp = L.compararEdiciones(U, E1);
+eq("Comparar ediciones", [cmp.baja, cmp.sube, cmp.igual, cmp.nuevo, cmp.quitado], [1, 0, 47, 1, 1]);
+eq("Comparar: fila del nº 10", cmp.filas.find(x => x.num === 10), { num: 10, fallo: f10u.fallo, antes: 343, ahora: 84, cambio: "baja" });
+eq("Revisión próxima", [L.revisionProxima(U, "2026-10-21"), L.revisionProxima(U, "2026-11-10").vencida, L.revisionProxima(U, "2026-01-01")], [{ dias: 14, vencida: false }, true, null]);
+
+// Hoja de trabajo
+const hoja = L.documentoHoja(U, "21/10/2026");
+eq("Hoja: apartados", hoja.bloques.filter(b => b.t === "h1").map(b => b.texto), ["Escalas de puntuación", "1. Lluvia de ideas: ¿qué puede salir mal?", "2. Análisis de cada fallo", "3. Mi votación de G, O y D"]);
+t("Hoja: tablas coherentes", hoja.bloques.filter(b => b.t === "tabla").every(b => !b.cab || b.filas.every(f => f.length === b.cab.length)));
+t("Hoja: Word construido", D.construirDocx(hoja).length > 10000);
+const hv = L.documentoHoja(L.nuevoAmfe("hv", ""), "");
+t("Hoja de un AMFE vacío", hv.bloques.some(b => b.t === "tabla" && b.filas.length === 4 + 0 && b.cab.length === 9) && D.construirDocx(hv).length > 3000);
+
+// Saneado de lo nuevo
+const S4 = L.sanearDatos({ amfes: [{ id: "q", equipo: [{ id: "m1", perfil: "X" }], bloques: [{ id: "b1", nombre: "B" }], subprocesos: [{ id: "s1", nombre: "S" }], ideas: [{ id: "i1", texto: "t", subprocesoId: "s1", bloqueId: "b9", falloId: "f9" }], tgn: { modo: "otro", votos: [{ miembroId: "m1", bloqueId: "b1", puntos: 3 }, { miembroId: "m9", bloqueId: "b1", puntos: 2 }] }, fallos: [{ id: "f1", num: 1, fallo: "x", votos: [{ miembroId: "m1", g: 5 }, { miembroId: "zz", g: 2 }] }] }] }, gid, "");
+const A4 = S4.amfes[0];
+eq("Saneado: ideas, votos y edición", [A4.ideas[0].bloqueId, A4.ideas[0].falloId, A4.tgn.modo, A4.tgn.votos.length, A4.tgn.votos[0].puntos, A4.fallos[0].votos.length, A4.edicion], ["", "", "321", 1, "3", 1, "00"]);
 
 console.log(`${ok} pruebas correctas, ${fallos} fallidas`);
 if (fallos) process.exit(1);

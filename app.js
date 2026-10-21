@@ -14,8 +14,16 @@
   // ---------- Versión y novedades ----------
   // Al publicar cambios: añadir una entrada AL PRINCIPIO de NOVEDADES, poner su versión en los ?v= de index.html, en
   // APP_VERSION y subir CACHE_NAME en sw.js. Formato de versión: AAAA.NN.
-  const APP_VERSION = "2026.03";
+  const APP_VERSION = "2026.04";
   const NOVEDADES = [
+    { version: "2026.04", fecha: "Octubre 2026", titulo: "Trabajo en equipo: ideas, votaciones y reuniones", cambios: [
+      "Nuevo paso 3, Encontrar los fallos: lluvia de ideas por subproceso con preguntas guía, agrupación en bloques, aviso de ideas repetidas y técnica de grupo nominal (3, 2 y 1 puntos o del 1 al 10) con el recuento y los comentarios del grupo.",
+      "Las ideas elegidas pasan a fallos con un toque, una a una o todas las de un bloque.",
+      "Votación del equipo para la gravedad, la ocurrencia y la detección: cada miembro puntúa, la app calcula la media y avisa si los votos están muy separados.",
+      "Modo reunión: letra grande y pantalla limpia para proyectar la lluvia de ideas, la votación y la matriz.",
+      "Hoja de trabajo para las sesiones presenciales, en Word y PDF: escalas, lluvia de ideas, análisis de fallos y hoja de votación.",
+      "Ediciones: al revisar el AMFE se crea una edición nueva que se compara con la anterior, y la portada avisa cuando se acerca la fecha de revisión.",
+      "El ejemplo de Urgencias trae la lluvia de ideas y la votación de los ejercicios del curso."] },
     { version: "2026.03", fecha: "Octubre 2026", titulo: "Acciones de mejora, reevaluación e informe AMFE", cambios: [
       "Nuevo paso 7, Acciones de mejora: para cada fallo prioritario, una o varias acciones con qué, por qué, dónde, cuándo, quién y cómo (5W1H), su tipo, sobre qué actúa, su indicador y su estándar, y su estado.",
       "La app distingue las medidas fuertes, intermedias y débiles, avisa si todas son de formación o recordatorios y de los plazos vencidos, y propone el «por qué» a partir del efecto del fallo.",
@@ -40,7 +48,7 @@
       "Puntuación de gravedad, ocurrencia y detección con la escala a la vista, IPR automático, orden por IPR y avisos de las trampas más habituales.",
       "Ejemplo completo del Servicio de Urgencias (49 fallos), Aprende (7 temas), glosario, tabla imprimible y copia de seguridad."] }
   ];
-  const ENTREGA = 3;   // pasos ya construidos (ver L.PASOS[].entrega)
+  const ENTREGA = 4;   // pasos ya construidos (ver L.PASOS[].entrega)
 
   // ---------- Utilidades ----------
   const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -215,7 +223,13 @@
         <a class="guide-card guide-card--hermana" href="${L.URL_AUD}" target="_blank" rel="noopener"><span class="guide-num">✓</span><div><div class="guide-q">Auditorías ↗</div><div class="guide-a">App hermana: <b>comprueba con una auditoría</b> si las medidas contra tus fallos prioritarios se aplican.</div></div><span class="guide-go">›</span></a>
         <a class="guide-card guide-card--hermana" href="${L.URL_IND}" target="_blank" rel="noopener"><span class="guide-num">%</span><div><div class="guide-q">Indicadores ↗</div><div class="guide-a">App hermana: <b>diseña los indicadores</b> con los que medirás tus acciones de mejora.</div></div><span class="guide-go">›</span></a>
       </div>
+      ${revisionesHtml(d)}
       ${practica("<b>Protección de datos:</b> un AMFE analiza un proceso, no a pacientes concretos. No escribas nombres de pacientes ni números de historia clínica.")}`;
+  }
+
+  function revisionesHtml(d) {
+    const l = d.amfes.filter(a => !d.amfes.some(x => x.anteriorId === a.id)).map(a => ({ a, r: L.revisionProxima(a, hoyIso()) })).filter(x => x.r);
+    return l.map(({ a, r }) => `<div class="warn">⚠ «${esc(L.corto(nombreAmfe(a) || "AMFE sin nombre", 60))}»: ${r.vencida ? `la revisión estaba prevista para el ${esc(L.fmtFecha(a.proxRevision))}` : `toca revisarlo en ${plural(r.dias, "día", "días")}`}. <a href="#/amfe/${a.id}/8">Crear una edición nueva</a></div>`).join("");
   }
 
   // ---------- Lista de AMFE ----------
@@ -237,7 +251,7 @@
       <a class="item-main" href="#/amfe/${a.id}">
         <b class="item-t">${lleno(nombreAmfe(a)) ? esc(nombreAmfe(a)) : '<span class="vacio">AMFE sin nombre</span>'}</b>
         <span class="item-s">${esc([a.unidad, a.titulo && a.proceso !== a.titulo ? a.proceso : ""].filter(lleno).join(" · ")) || "&nbsp;"}</span>
-        <span class="badges">${r.maxIPR ? iprBadge(r.maxIPR, " ipr-badge--max") : ""}<span class="badge">${plural(r.subprocesos, "subproceso", "subprocesos")}</span><span class="badge">${plural(r.n, "fallo", "fallos")}</span><span class="badge badge--prog">Pasos ${hechos}/${disp.length}</span></span>
+        <span class="badges">${r.maxIPR ? iprBadge(r.maxIPR, " ipr-badge--max") : ""}<span class="badge">${plural(r.subprocesos, "subproceso", "subprocesos")}</span><span class="badge">${plural(r.n, "fallo", "fallos")}</span><span class="badge badge--prog">Pasos ${hechos}/${disp.length}</span>${a.edicion && a.edicion !== "00" ? `<span class="badge">Edición ${esc(a.edicion)}</span>` : ""}${L.revisionProxima(a, hoyIso()) ? `<span class="ea-b ea-b--vencida">Toca revisar</span>` : ""}</span>
       </a>
       <div class="item-pie"><span>Modificado: ${fechaCorta(a.modificado)}</span><span><button class="link-btn" data-act="amfe-dup" data-id="${a.id}">Duplicar</button> · <button class="link-btn link-btn--peligro" data-act="amfe-del" data-id="${a.id}">Borrar</button></span></div>
     </div>`;
@@ -248,7 +262,7 @@
   const abiertos = new Set();          // fallos desplegados en el paso 4
   let pegarAbierto = false;
   const hoyIso = () => new Date().toISOString().slice(0, 10);
-  const avisosDe = (a, n) => ({ 1: L.avisosProceso, 2: L.avisosEquipo, 4: L.avisosFallos, 5: L.avisosPuntuar, 6: L.avisosPriorizar, 7: x => L.avisosMejorar(x, hoyIso()), 8: L.avisosCerrar }[n] || (() => []))(a);
+  const avisosDe = (a, n) => ({ 1: L.avisosProceso, 2: L.avisosEquipo, 3: L.avisosIdeas, 4: L.avisosFallos, 5: L.avisosPuntuar, 6: L.avisosPriorizar, 7: x => L.avisosMejorar(x, hoyIso()), 8: L.avisosCerrar }[n] || (() => []))(a);
   const avisosGenerales = (a, n) => avisosDe(a, n).filter(x => !x.fallo).map(avisoHtml).join("");
   const avisosFallo = (a, n, id) => avisosDe(a, n).filter(x => x.fallo === id && !x.accion).map(avisoHtml).join("");
   const avisosAccion = (a, id) => avisosDe(a, 7).filter(x => x.accion === id).map(avisoHtml).join("");
@@ -258,6 +272,7 @@
     if (document.body.classList.contains("ver-informe")) {
       const fecha = new Date().toLocaleDateString("es-ES");
       if (docActual === "informe") renderDoc(L.documentoInforme(a, fecha, tamMatriz));
+      else if (docActual === "hoja") renderDoc(L.documentoHoja(a, fecha));
       else if (docActual === "resumen") renderDoc(L.documentoResumen(a, fecha));
       else renderTabla(a);
       return;
@@ -425,7 +440,7 @@
           <tr><td><b>Causa</b></td><td>¿Por qué?</td><td>Rutina interrumpida, recursos saturados</td></tr>
           <tr><td><b>Controles</b></td><td>¿Qué hay hoy?</td><td>Protocolo de identificación; impresora de pulseras en triaje</td></tr></table></div>
         ${trampa("El error más frecuente es escribir una <b>causa</b> como fallo («sobrecarga asistencial», «falta de formación») o un <b>efecto</b> como fallo («daño al paciente»). La app te avisa cuando lo detecta.")}`)}
-      <div class="toolbar no-print"><button class="btn" data-act="pegar-abrir">Pegar desde Excel</button>${a.fallos.length ? `<button class="btn" data-act="fa-abrir-todos">${abiertos.size ? "Cerrar todos" : "Abrir todos"}</button><button class="btn" data-act="informe">Ver tabla / PDF</button>` : ""}</div>
+      <div class="toolbar no-print"><button class="btn" data-act="pegar-abrir">Pegar desde Excel</button>${a.fallos.length ? `<button class="btn" data-act="fa-abrir-todos">${abiertos.size ? "Cerrar todos" : "Abrir todos"}</button><button class="btn" data-act="informe">Ver tabla / PDF</button>` : ""}<button class="btn" data-act="doc-ver" data-doc="hoja">Hoja de trabajo</button></div>
       ${pegarAbierto ? pegarHtml() : ""}
       <div data-zona="avisos">${avisosGenerales(a, 4)}</div>
       ${a.subprocesos.length ? a.subprocesos.map((s, i) => grupoFallos(a, s, i)).join("") + grupoFallos(a, null, 0)
@@ -457,6 +472,26 @@
       </div>
       <p class="punt-esc" data-zesc="${f.id}">${escFila(a, f)}</p>
       <div data-zav="${f.id}">${avisosFallo(a, 5, f.id)}</div>
+      ${a.equipo.some(m => lleno(m.perfil)) ? `<button type="button" class="link-btn vot-btn no-print" data-act="vot-toggle" data-id="${f.id}">${votAbiertos.has(f.id) ? "Cerrar la votación ▴" : `Votación del equipo${f.votos.length ? ` (${plural(f.votos.length, "voto", "votos")})` : ""} ▾`}</button>` : ""}
+      ${votAbiertos.has(f.id) ? votacionHtml(a, f) : ""}
+    </div>`;
+  }
+  // Votación individual de G·O·D (mejora A): cada miembro puntúa; la app propone la media y avisa de la discrepancia
+  const votAbiertos = new Set();
+  function mediaHtml(f) {
+    const m = L.mediaVotos(f), dis = L.discrepancia(f);
+    if (!["g", "o", "d"].some(k => m[k])) return `<span class="field-sub">Cuando voten, aquí verás la media.</span>`;
+    return ["g", "o", "d"].map(k => m[k] ? `<span class="vot-med${dis.includes(k) ? " vot-med--dis" : ""}" title="${m[k].n} votos · media exacta ${m[k].exacta.toFixed(1).replace(".", ",")} · entre el voto más alto y el más bajo hay ${plural(m[k].rango, "punto", "puntos")}"><b>${k.toUpperCase()} ${m[k].media}</b>${dis.includes(k) ? " ⚠" : ""}</span>` : `<span class="vot-med">${k.toUpperCase()} –</span>`).join("")
+      + `<button type="button" class="chip chip--accent" data-act="vot-media" data-id="${f.id}">Usar la media</button>`;
+  }
+  function votacionHtml(a, f) {
+    const M = a.equipo.filter(m => lleno(m.perfil)), voto = (m, k) => { const v = f.votos.find(x => x.miembroId === m.id); return v ? v[k] : ""; };
+    return `<div class="vot no-print">
+      <p class="field-sub">Cada miembro puntúa sin hablar con los demás; luego se comparan los votos. La app propone la media redondeada, pero el valor final lo decide el equipo.</p>
+      <div class="table-wrap"><table class="mini vot-t"><thead><tr><th>Miembro</th><th>G</th><th>O</th><th>D</th></tr></thead><tbody>
+        ${M.map(m => `<tr><td>${esc(L.corto(etiquetaMiembro(m), 38))}</td>${["g", "o", "d"].map(k => `<td><input class="txt-in vot-in" data-vf="${f.id}" data-vm="${m.id}" data-f="${k}" value="${esc(voto(m, k))}" inputmode="numeric" maxlength="2" aria-label="${L.ESCALA_NOM[k]} de ${esc(m.perfil)}" /></td>`).join("")}</tr>`).join("")}
+      </tbody></table></div>
+      <div class="vot-res" data-zmed="${f.id}">${mediaHtml(f)}</div>
     </div>`;
   }
   function tablaOrden(a) {
@@ -491,6 +526,7 @@
         ${escalaHtml(a)}
         <div class="formula">IPR = Gravedad × Ocurrencia × Detección (de 1 a 1.000)</div>
         ${trampa("La <b>detección va al revés</b> que las otras dos: 1 = se descubre casi seguro antes de causar daño; 10 = casi imposible de detectar. Antes de puntuarla, mirad los controles actuales.")}`, "Explicado fácil: las escalas")}
+      <div class="toolbar no-print">${btnReunion()}<button class="btn" data-act="doc-ver" data-doc="hoja">Hoja de trabajo y votación</button></div>
       <div class="res-linea" data-zona="resumen5">${resumen5(r)}</div>
       <div data-zona="avisos">${avisosGenerales(a, 5)}</div>
       ${F.length ? a.subprocesos.map((s, i) => { const l = L.ordenarFallos(F.filter(f => f.subprocesoId === s.id), "num"); return l.length ? `<section class="grupo-sub"><h3 class="grupo-t">${subPunto(s)}${i + 1}. ${esc(s.nombre || "Subproceso sin nombre")}</h3><div class="punt-lista">${l.map(f => filaPuntuar(a, f)).join("")}</div></section>` : ""; }).join("")
@@ -574,6 +610,7 @@
         <li>El equipo puede <b>añadir o quitar</b> un fallo a mano, explicando por qué.</li></ul>
         <p>La <b>matriz de riesgos</b> coloca cada fallo según su gravedad (filas) y su ocurrencia (columnas). No tiene en cuenta la detección, así que no sustituye al IPR, pero <b>comunica el riesgo de un vistazo</b>.</p>
         ${trampa("Un fallo en la zona roja de la matriz puede no salir prioritario por IPR porque «se detecta fácil». Comprobad que esa detección existe de verdad.")}`)}
+      <div class="toolbar no-print">${btnReunion()}</div>
       <div class="card">
         <h2 class="sub-h">Criterio de prioridad</h2>
         <div class="seg" role="group">${[["top", "Los N de mayor IPR"], ["umbral", "Umbral de IPR"]].map(([v, t]) => `<button type="button" class="${a.prioridad.modo === v ? "active" : ""}" data-act="prio-modo" data-v="${v}">${t}</button>`).join("")}</div>
@@ -730,6 +767,8 @@
       <h2 class="sec-t">Control del documento</h2>
       <div class="card">${controlHtml(a)}</div>
       <div data-zona="avisos">${avisosGenerales(a, 8)}</div>
+      <h2 class="sec-t">Ediciones y revisión</h2>
+      <div class="card">${edicionesHtml(a)}</div>
       <h2 class="sec-t">Documentos</h2>
       <div class="doc-botones">
         <div class="card"><h3 class="sub-h">Informe AMFE</h3><p class="field-sub">El documento completo, con el orden del Documento Final del curso: control del documento, proceso, equipo, resultados, matriz, acciones, reevaluación, conclusiones y anexos.</p>
@@ -738,10 +777,95 @@
           <div class="toolbar"><button class="btn btn--primary" data-act="doc-word" data-doc="resumen">⬇ Word</button><button class="btn" data-act="doc-ver" data-doc="resumen">Ver / PDF</button></div></div>
         <div class="card"><h3 class="sub-h">Tabla y Excel</h3><p class="field-sub">La tabla AMFE completa para imprimir y el libro de Excel con todas las hojas.</p>
           <div class="toolbar"><button class="btn" data-act="informe">Tabla / PDF</button><button class="btn" data-act="excel">Excel</button></div></div>
+        <div class="card"><h3 class="sub-h">Hoja de trabajo</h3><p class="field-sub">Para las sesiones presenciales: escalas, lluvia de ideas, análisis de fallos y hoja de votación. Lo apuntado en papel se pasa luego con «Pegar desde Excel».</p>
+          <div class="toolbar"><button class="btn" data-act="doc-word" data-doc="hoja">⬇ Word</button><button class="btn" data-act="doc-ver" data-doc="hoja">Ver / PDF</button></div></div>
       </div>`;
   }
+  // Ediciones (mejora G): cada revisión periódica es una edición nueva que se compara con la anterior
+  function edicionesHtml(a) {
+    const ant = a.anteriorId ? buscaAmfe(a.anteriorId) : null, sig = datos.amfes.find(x => x.anteriorId === a.id);
+    const rev = L.revisionProxima(a, hoyIso());
+    let h = `<p>Edición <b>${esc(a.edicion || "00")}</b>${lleno(a.proxRevision) ? ` · Próxima revisión: <b>${esc(L.fmtFecha(a.proxRevision))}</b>${rev ? (rev.vencida ? ` <span class="ea-b ea-b--vencida">Pasada</span>` : ` <span class="ea-b ea-b--curso">En ${plural(rev.dias, "día", "días")}</span>`) : ""}` : ""}</p>
+      <p class="field-sub">Cuando toque revisar el AMFE (por fecha, por un cambio en el proceso o por un incidente), crea una <b>edición nueva</b>: es una copia completa que podréis actualizar y comparar con esta.</p>`;
+    if (sig) h += `<div class="note">ℹ Ya existe una edición posterior (${esc(sig.edicion)}). <a href="#/amfe/${sig.id}/8">Ir a la edición ${esc(sig.edicion)}</a></div>`;
+    else h += `<div class="toolbar no-print"><button class="btn" data-act="ed-nueva">Crear la edición ${String((parseInt(a.edicion, 10) || 0) + 1).padStart(2, "0")}</button></div>`;
+    if (a.anteriorId && !ant) h += `<p class="field-sub">La edición anterior no está en este dispositivo.</p>`;
+    if (ant) {
+      const C2 = L.compararEdiciones(ant, a), ico = { baja: "↓", sube: "↑", igual: "=", nuevo: "nuevo", quitado: "quitado", sin: "–" };
+      const cambian = C2.filas.filter(x => x.cambio !== "igual");
+      h += `<h3 class="sub-h">Comparación con la edición ${esc(ant.edicion)} <a class="field-sub" href="#/amfe/${ant.id}/8">(abrirla)</a></h3>
+        <div class="res-linea"><span class="ea-b ea-b--hecha">${C2.baja} bajan</span><span class="ea-b ea-b--vencida">${C2.sube} suben</span><span class="badge">${C2.igual} igual</span><span class="badge">${C2.nuevo} nuevos</span><span class="badge">${C2.quitado} quitados</span></div>
+        ${cambian.length ? `<div class="table-wrap"><table class="mini tabla-riesgos"><thead><tr><th>Nº</th><th>Modo de fallo</th><th>IPR antes</th><th>IPR ahora</th><th>Cambio</th></tr></thead><tbody>${cambian.map(x => `<tr><td>${x.num}</td><td>${esc(x.fallo)}</td><td>${x.antes ? iprBadge(x.antes) : "—"}</td><td>${x.ahora ? iprBadge(x.ahora) : "—"}</td><td class="cmp-${x.cambio}">${ico[x.cambio]}</td></tr>`).join("")}</tbody></table></div>` : `<p class="field-sub">Aún no hay cambios respecto a la edición anterior.</p>`}`;
+    }
+    return h;
+  }
 
-  const RENDER = { 1: paso1, 2: paso2, 4: paso4, 5: paso5, 6: paso6, 7: paso7, 8: paso8 };
+  // ---------- Paso 3 · Encontrar los fallos ----------
+  let subIdeas = "";
+  const btnReunion = () => `<button class="btn" data-act="reunion">${document.body.classList.contains("modo-reunion") ? "Salir del modo reunión" : "🖥 Modo reunión"}</button>`;
+  function ideaFila(a, i) {
+    const f = i.falloId ? a.fallos.find(x => x.id === i.falloId) : null;
+    return `<div class="idea-fila">
+      <input class="txt-in idea-in" data-idea="${i.id}" data-f="texto" value="${esc(i.texto)}" aria-label="Idea" autocomplete="off" />
+      <div class="input-wrap idea-bq"><select class="txt-in" data-idea="${i.id}" data-f="bloqueId" aria-label="Bloque"><option value="">— Sin bloque —</option>${a.bloques.map(b => `<option value="${b.id}"${b.id === i.bloqueId ? " selected" : ""}>${esc(L.corto(b.nombre || "Bloque sin nombre", 40))}</option>`).join("")}</select></div>
+      ${f ? `<a class="badge badge--clave idea-ok" href="#/amfe/${a.id}/4" title="Ya es el fallo nº ${f.num}">✓ Nº ${f.num}</a>` : `<button type="button" class="btn btn--sm" data-act="idea-fallo" data-id="${i.id}" title="Pasar esta idea al paso 4 como modo de fallo">→ Fallo</button>`}
+      <button type="button" class="icon-btn" data-act="idea-del" data-id="${i.id}" aria-label="Quitar la idea">✕</button>
+    </div>`;
+  }
+  function rankingHtml(a) {
+    const R = L.ranking(a);
+    if (!R.some(r => r.total)) return `<p class="field-sub">Cuando el equipo vote, aquí aparecerá el recuento.</p>`;
+    return `<div class="table-wrap"><table class="mini tabla-riesgos tgn-res"><thead><tr><th>Puesto</th><th>Bloque</th><th>Puntos</th><th>Votos</th><th>Comentario del grupo</th><th></th></tr></thead><tbody>
+      ${R.map((r, k) => { const pend = a.ideas.filter(i => i.bloqueId === r.b.id && lleno(i.texto) && !(i.falloId && a.fallos.some(f => f.id === i.falloId))).length; return `<tr${r.total ? "" : ' class="tgn-cero"'}><td>${r.total ? k + 1 : "–"}</td><td><b>${esc(r.b.nombre || "Sin nombre")}</b><br><span class="field-sub">${plural(r.ideas, "idea", "ideas")}</span></td><td><b>${r.total}</b></td><td>${r.votos}</td>
+        <td><textarea class="txt-in txt-in--sm" data-bq="${r.b.id}" data-f="comentario" rows="2" placeholder="${r.total ? "Por qué es importante" : "Nadie lo ha votado: ¿por qué?"}">${esc(r.b.comentario)}</textarea></td>
+        <td>${pend ? `<button type="button" class="btn btn--sm no-print" data-act="bloque-fallos" data-id="${r.b.id}">${pend === 1 ? "Pasar su idea a fallo" : `Pasar sus ${pend} ideas a fallos`}</button>` : ""}</td></tr>`; }).join("")}
+    </tbody></table></div>`;
+  }
+  function votacionTgn(a) {
+    const M = a.equipo.filter(m => lleno(m.perfil)), B = a.bloques;
+    if (!M.length) return `<p class="placeholder-box">Para votar hace falta el equipo. <a href="#/amfe/${a.id}/2">Añádelo en el paso 2</a>.</p>`;
+    if (B.length < 2) return `<p class="placeholder-box">Agrupa primero las ideas en al menos dos bloques.</p>`;
+    if (a.tgn.modo === "321") return `<div class="table-wrap"><table class="mini tgn-t"><thead><tr><th>Miembro</th><th>3 puntos</th><th>2 puntos</th><th>1 punto</th></tr></thead><tbody>
+      ${M.map(m => `<tr><td>${esc(L.corto(etiquetaMiembro(m), 34))}</td>${[3, 2, 1].map(pt => `<td><select class="txt-in tgn-sel" data-v321="${m.id}" data-p="${pt}" aria-label="${pt} puntos de ${esc(m.perfil)}"><option value="">—</option>${B.map(b => `<option value="${b.id}"${L.voto321(a, m.id, pt) === b.id ? " selected" : ""}>${esc(L.corto(b.nombre || "Sin nombre", 30))}</option>`).join("")}</select></td>`).join("")}</tr>`).join("")}
+    </tbody></table></div>`;
+    return `<div class="table-wrap"><table class="mini tgn-t tgn-t--10"><thead><tr><th>Bloque</th>${M.map(m => `<th title="${esc(m.perfil)}">${esc(L.corto(etiquetaMiembro(m), 14))}</th>`).join("")}</tr></thead><tbody>
+      ${B.map(b => `<tr><td>${esc(L.corto(b.nombre || "Sin nombre", 40))}</td>${M.map(m => `<td><input class="txt-in vot-in" data-v10="${m.id}" data-b="${b.id}" value="${esc(L.voto1a10(a, m.id, b.id))}" inputmode="numeric" maxlength="2" aria-label="Voto de ${esc(m.perfil)} a ${esc(b.nombre)}" /></td>`).join("")}</tr>`).join("")}
+    </tbody></table></div>`;
+  }
+  function paso3(a) {
+    const SUB = a.subprocesos;
+    if (!SUB.some(s => s.id === subIdeas)) subIdeas = SUB.length ? SUB[0].id : "";
+    const grupos = [...SUB.map(s => [s, a.ideas.filter(i => i.subprocesoId === s.id)]), [null, a.ideas.filter(i => !SUB.some(s => s.id === i.subprocesoId))]].filter(([, l]) => l.length);
+    return `
+      ${idea("Primero, <b>muchas ideas sin juzgarlas</b>; después se agrupan en bloques y cada persona vota en silencio para quedarse con lo importante.")}
+      ${facil(`<p><b>Lluvia de ideas</b>: para cada subproceso, cada persona dice qué puede salir mal. Todo se apunta, sin debatir ni criticar. Se puede pedir tres ideas a cada uno.</p>
+        <p><b>Agrupar</b>: se juntan las ideas parecidas en bloques temáticos y se quitan las repetidas.</p>
+        <p><b>Técnica de grupo nominal</b>: cada persona reparte en silencio 3, 2 y 1 puntos entre los bloques que le parecen más importantes; se suman y se comentan, también los bloques que nadie votó.</p>
+        <p>Las ideas importantes pasan al <b>paso 4</b> como modos de fallo con un toque.</p>
+        ${trampa("La lluvia de ideas puede dejar fuera las ideas minoritarias o de quien habla menos. Por eso se vota en silencio y de forma individual.")}`)}
+      <div class="toolbar no-print">${btnReunion()}<button class="btn" data-act="doc-ver" data-doc="hoja">Hoja de trabajo</button></div>
+      <h2 class="sec-t">1. Lluvia de ideas <span class="contador">${a.ideas.length}</span></h2>
+      ${SUB.length ? `<div class="card ideas-entrada no-print">
+        <div class="quick" role="group" aria-label="Subproceso">${SUB.map((s, i) => `<button type="button" class="chip chip-sub${s.id === subIdeas ? " active" : ""}" data-act="idea-sub" data-id="${s.id}">${subPunto(s)}${i + 1}. ${esc(L.corto(s.nombre || "Sin nombre", 30))}</button>`).join("")}</div>
+        <p class="guia">${L.PREGUNTAS_GUIA.map(q => `<span>${esc(q)}</span>`).join("")}</p>
+        <div class="idea-nueva"><input class="txt-in" id="idea-txt" placeholder="Escribe una idea y pulsa Intro" autocomplete="off" /><button class="btn btn--primary" data-act="idea-add">Añadir</button></div>
+      </div>` : `<div class="placeholder-box"><p>Define primero los subprocesos en el <a href="#/amfe/${a.id}/1">paso 1</a>.</p></div>`}
+      ${grupos.map(([s, l]) => `<section class="grupo-sub"><h3 class="grupo-t">${subPunto(s)}${s ? esc(s.nombre || "Sin nombre") : "Sin subproceso"} <span class="contador">${l.length}</span></h3><div class="ideas-lista">${l.map(i => ideaFila(a, i)).join("")}</div></section>`).join("")}
+      <h2 class="sec-t">2. Agrupar en bloques <span class="contador">${a.bloques.length}</span></h2>
+      <div class="card">
+        <div class="idea-nueva no-print"><input class="txt-in" id="bloque-txt" placeholder="Nombre del bloque (p. ej. Identificación del paciente)" autocomplete="off" /><button class="btn" data-act="bloque-add">Crear bloque</button></div>
+        <div class="bloques-lista">${a.bloques.map(b => `<div class="bloque-fila"><input class="txt-in" data-bq="${b.id}" data-f="nombre" value="${esc(b.nombre)}" aria-label="Nombre del bloque" autocomplete="off" /><span class="badge">${plural(a.ideas.filter(i => i.bloqueId === b.id).length, "idea", "ideas")}</span><button type="button" class="icon-btn no-print" data-act="bloque-del" data-id="${b.id}" aria-label="Quitar el bloque">✕</button></div>`).join("") || `<p class="field-sub">Crea los bloques y elige el de cada idea en su desplegable.</p>`}</div>
+      </div>
+      <h2 class="sec-t">3. Técnica de grupo nominal</h2>
+      <div class="seg" role="group">${Object.keys(L.MODOS_TGN).map(k => `<button type="button" class="${a.tgn.modo === k ? "active" : ""}" data-act="tgn-modo" data-v="${k}" title="${esc(L.MODOS_TGN[k].que)}">${L.MODOS_TGN[k].nom}</button>`).join("")}</div>
+      <p class="field-sub">${esc(L.MODOS_TGN[a.tgn.modo].que)}</p>
+      ${votacionTgn(a)}
+      <h3 class="sub-h">Recuento</h3>
+      <div data-zona="ranking">${rankingHtml(a)}</div>
+      <div data-zona="avisos">${avisosGenerales(a, 3)}</div>`;
+  }
+
+  const RENDER = { 1: paso1, 2: paso2, 3: paso3, 4: paso4, 5: paso5, 6: paso6, 7: paso7, 8: paso8 };
 
   // ---------- Documentos: bloques → HTML (vista previa, imprimir y PDF) y → Word ----------
   function bloquesHtml(bloques) {
@@ -768,9 +892,9 @@
   function descargarWord(a, cual) {
     try {
       const fecha = new Date().toLocaleDateString("es-ES");
-      const doc = cual === "resumen" ? L.documentoResumen(a, fecha) : L.documentoInforme(a, fecha, tamMatriz);
+      const doc = cual === "resumen" ? L.documentoResumen(a, fecha) : cual === "hoja" ? L.documentoHoja(a, fecha) : L.documentoInforme(a, fecha, tamMatriz);
       const bytes = window.Docx.construirDocx(Object.assign({ pie: doc.titulo + " · Generado con la app AMFE" }, doc));
-      const base = (cual === "resumen" ? "AMFE Resumen " : "AMFE ") + (nombreAmfe(a) || "").slice(0, 60);
+      const base = ({ resumen: "AMFE Resumen ", hoja: "AMFE Hoja de trabajo " }[cual] || "AMFE ") + (nombreAmfe(a) || "").slice(0, 60);
       compartirOBajar(new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" }), `${base.replace(/[\\/:*?"<>|%]/g, "").trim()} ${fechaArchivo()}.docx`, "Word descargado. Ábrelo con Word, Pages o LibreOffice y ajústalo a tu gusto.");
     } catch (e) { toast("No se ha podido crear el Word.", 4000); }
   }
@@ -820,11 +944,12 @@
       nsub: () => String(a.subprocesos.length), neq: () => String(a.equipo.length), nses: () => String(a.sesiones.length),
       resumen5: () => resumen5(L.resumen(a)), grafico: () => grafico(a), orden: () => tablaOrden(a),
       criterio: () => criterioRes(a), matriz: () => matrizHtml(a), porsub: () => porSubHtml(a),
-      lista6: () => listaPrio(a),
+      lista6: () => listaPrio(a), ranking: () => rankingHtml(a),
       resumen7: () => resumen7(a), grafico8: () => grafico8(a)
     };
     // La lista del paso 6 solo se repinta si se cambia el criterio (si se escribe un motivo dentro, se perdería el foco)
-    if (!todo) delete Z.lista6;
+    if (!todo) { delete Z.lista6; delete Z.ranking; }
+    $$("[data-zmed]").forEach(el => { const f = a.fallos.find(x => x.id === el.dataset.zmed); if (f) el.innerHTML = mediaHtml(f); });
     $$("[data-zona]").forEach(el => { const f = Z[el.dataset.zona]; if (f) el.innerHTML = f(); });
     $$("[data-zav]").forEach(el => { el.innerHTML = avisosFallo(a, n, el.dataset.zav); });
     $$("[data-zac]").forEach(el => { el.innerHTML = avisosAccion(a, el.dataset.zac); });
@@ -1189,6 +1314,17 @@
       if (esSel) { abiertos.add(fa.id); repintar(); } else refrescar(fa.id);
       return;
     }
+    if (t.dataset.idea) {
+      const i = buscaEn(a.ideas, t.dataset.idea); if (!i) return;
+      i[f] = t.value; tocado(a); if (esSel) repintar(); else refrescar(); return;
+    }
+    if (t.dataset.bq) { const b = buscaEn(a.bloques, t.dataset.bq); if (!b) return; b[f] = t.value; tocado(a); refrescar(); return; }
+    if (t.dataset.v321) { L.ponerVoto321(a, t.dataset.v321, t.dataset.p, t.value); tocado(a); repintar(); return; }
+    if (t.dataset.v10) { L.ponerVoto1a10(a, t.dataset.v10, t.dataset.b, t.value); tocado(a); refrescar(null, true); return; }
+    if (t.dataset.vf) {
+      const fa = buscaEn(a.fallos, t.dataset.vf); if (!fa) return;
+      L.ponerVotoGOD(fa, t.dataset.vm, f, t.value); tocado(a); refrescar(fa.id); return;
+    }
     if (t.dataset.ac) { const r = buscaAccion(a, t.dataset.ac); if (!r) return; setPath(r.x, f, t.value); tocado(a); refrescar(); return; }
     if (t.dataset.fr) {
       const fa = buscaEn(a.fallos, t.dataset.fr); if (!fa) return;
@@ -1205,6 +1341,24 @@
     const hacer = () => { Object.assign(r.x.indicador, y); indPara = null; tocado(a); repintar(); toast("Indicador copiado. Revisa el estándar.", 3000); };
     if (lleno(r.x.indicador.nombre)) confirmar("<p>Se sustituirá el indicador de esta acción por el elegido.</p>", "Sustituir", hacer, { peligro: false }); else hacer();
   });
+  function anadirIdea(a) {
+    const el = $("#idea-txt"), txt = el ? el.value.trim() : ""; if (!txt) { if (el) el.focus(); return; }
+    a.ideas.push(Object.assign(L.nuevaIdea(genId(), subIdeas), { texto: txt })); tocado(a); repintar();
+    const n = $("#idea-txt"); if (n) n.focus();
+  }
+  view.addEventListener("keydown", e => {
+    if (e.key !== "Enter" || !actual) return;
+    if (e.target.id === "idea-txt") { e.preventDefault(); anadirIdea(actual); }
+    else if (e.target.id === "bloque-txt") { e.preventDefault(); const b = $("[data-act='bloque-add']"); if (b) b.click(); }
+  });
+  // Modo reunión (mejora J): letra grande y pantalla limpia para proyectar
+  function ponerReunion(si) {
+    document.body.classList.toggle("modo-reunion", si);
+    let x = $("#salir-reunion");
+    if (si && !x) { x = document.createElement("button"); x.id = "salir-reunion"; x.className = "btn salir-reunion no-print"; x.textContent = "✕ Salir del modo reunión"; x.addEventListener("click", () => ponerReunion(false)); document.body.appendChild(x); }
+    if (!si && x) x.remove();
+    if (actual) repintar();
+  }
   view.addEventListener("toggle", e => {
     if (e.target.matches && e.target.matches("details[data-recordar]") && !document.body.classList.contains("ver-informe")) escribir(KEY_FACIL, e.target.open ? "1" : "0");
   }, true);
@@ -1400,6 +1554,50 @@
     else if (act === "ch-del" && a) { a.control.historial.splice(Number(b.dataset.i), 1); tocado(a); repintar(); }
     else if (act === "doc-ver") irInforme(b.dataset.doc);
     else if (act === "doc-word" && a) descargarWord(a, b.dataset.doc);
+    // --- Paso 3 ---
+    else if (act === "idea-sub") { subIdeas = id; $$(".chip-sub").forEach(x => x.classList.toggle("active", x.dataset.id === id)); const el = $("#idea-txt"); if (el) el.focus(); }
+    else if (act === "idea-add" && a) anadirIdea(a);
+    else if (act === "idea-del" && a) { a.ideas = a.ideas.filter(i => i.id !== id); tocado(a); repintar(); }
+    else if (act === "idea-fallo" && a) {
+      const i = buscaEn(a.ideas, id); if (!i || !lleno(i.texto)) return;
+      const f = L.ideaAFallo(a, i, genId); tocado(a); repintar(); if (f) toast(`Ahora es el fallo nº ${f.num}. Complétalo en el paso 4 (efecto, causa y controles).`, 3500);
+    }
+    else if (act === "bloque-add" && a) {
+      const el = $("#bloque-txt"), nom = el ? el.value.trim() : ""; if (!nom) { if (el) el.focus(); return; }
+      a.bloques.push(L.nuevoBloque(genId(), nom)); tocado(a); repintar(); const n = $("#bloque-txt"); if (n) n.focus();
+    }
+    else if (act === "bloque-del" && a) {
+      const bq = buscaEn(a.bloques, id); if (!bq) return;
+      const hacer = () => { a.bloques = a.bloques.filter(x => x.id !== id); a.ideas.forEach(i => { if (i.bloqueId === id) i.bloqueId = ""; }); a.tgn.votos = a.tgn.votos.filter(v => v.bloqueId !== id); tocado(a); repintar(); };
+      const n = a.ideas.filter(i => i.bloqueId === id).length + a.tgn.votos.filter(v => v.bloqueId === id).length;
+      if (n) confirmar(`<p>Se quitará el bloque «${esc(bq.nombre)}». Sus ideas no se borran (quedan sin bloque), pero se pierden sus votos.</p>`, "Quitar", hacer); else hacer();
+    }
+    else if (act === "bloque-fallos" && a) {
+      const l = a.ideas.filter(i => i.bloqueId === id && lleno(i.texto)).map(i => L.ideaAFallo(a, i, genId)).filter(Boolean);
+      tocado(a); repintar(); toast(`${plural(l.length, "idea pasada", "ideas pasadas")} a fallos (nº ${l.map(f => f.num).join(", ")}).`, 3500);
+    }
+    else if (act === "tgn-modo" && a) {
+      if (a.tgn.modo === b.dataset.v) return;
+      const hacer = () => { a.tgn.modo = b.dataset.v; a.tgn.votos = []; tocado(a); repintar(); };
+      if (a.tgn.votos.length) confirmar("<p>Al cambiar la forma de votar se borran los votos que hay.</p>", "Cambiar", hacer); else hacer();
+    }
+    else if (act === "reunion") ponerReunion(!document.body.classList.contains("modo-reunion"));
+    // --- Votación de G·O·D ---
+    else if (act === "vot-toggle" && a) { if (votAbiertos.has(id)) votAbiertos.delete(id); else votAbiertos.add(id); repintar(); }
+    else if (act === "vot-media" && a) {
+      const f = buscaEn(a.fallos, id); if (!f) return; const m = L.mediaVotos(f);
+      if (!["g", "o", "d"].some(k => m[k])) { toast("Aún no hay votos.", 2500); return; }
+      const hacer = () => { ["g", "o", "d"].forEach(k => { if (m[k]) f[k] = String(m[k].media); }); tocado(a); repintar(); };
+      if (L.discrepancia(f).length) confirmar("<p>Los votos están muy separados en alguna escala. ¿Lo habéis hablado? Si es así, usa la media (o escribe el valor que acordéis).</p>", "Usar la media", hacer, { peligro: false }); else hacer();
+    }
+    // --- Ediciones ---
+    else if (act === "ed-nueva" && a) {
+      confirmar(`<p>Se creará la <b>edición ${String((parseInt(a.edicion, 10) || 0) + 1).padStart(2, "0")}</b>: una copia completa de este AMFE para revisarlo. Esta edición se queda como estaba, para comparar.</p><p>Revisad el proceso, los fallos (nuevos o que ya no existen) y las puntuaciones a la luz de las acciones hechas y de los incidentes.</p>`, "Crear la edición", () => {
+        // En los ejemplos, la edición nueva también es de ejemplo (id «ej-…»): vive en memoria y no se mezcla con los datos
+        const c = L.nuevaEdicion(a, modoEjemplo ? () => "ej-ed-" + genId() : genId, hoy()); datos.amfes.push(c); if (!modoEjemplo) guardar(true);
+        location.hash = `#/amfe/${c.id}/5`; toast(`Edición ${c.edicion} creada. Empieza por revisar las puntuaciones.`, 4000);
+      }, { titulo: "Nueva edición", peligro: false });
+    }
     // --- Generales ---
     else if (act === "informe") irInforme();
     else if (act === "volver") location.hash = rutaActual();
@@ -1447,7 +1645,7 @@
   $("#btn-acerca").addEventListener("click", () => { ma.hidden = false; });
   $("#btn-acerca-cerrar").addEventListener("click", () => { ma.hidden = true; });
   ma.addEventListener("click", e => { if (e.target === ma) ma.hidden = true; });
-  document.addEventListener("keydown", e => { if (e.key === "Escape") { ma.hidden = true; $("#modal-confirmar").hidden = true; } });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") { ma.hidden = true; $("#modal-confirmar").hidden = true; if (document.body.classList.contains("modo-reunion")) ponerReunion(false); } });
 
   // ---------- Versiones y novedades ----------
   const KEY_VERSION = "amfe-version-vista";

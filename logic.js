@@ -141,7 +141,8 @@
   function nuevoAmfe(id, fecha) {
     return { id, titulo: "", proceso: "", unidad: "", objetivo: "", inicio: "", fin: "", incluye: "", excluye: "", responsable: "", fecha: "",
       subprocesos: [], equipo: [], sesiones: [], fallos: [], escalas: nuevasEscalas(), prioridad: nuevaPrioridad(),
-      introduccion: "", conclusiones: "", control: nuevoControl(), proxRevision: "", notas: "", creado: fecha, modificado: fecha };
+      introduccion: "", conclusiones: "", control: nuevoControl(), proxRevision: "", edicion: "00", anteriorId: "",
+      ideas: [], bloques: [], tgn: nuevaTgn(), notas: "", creado: fecha, modificado: fecha };
   }
   // Criterio de prioridad: los N de mayor IPR (15, como el curso) o los que superan un umbral de IPR
   const nuevaPrioridad = () => ({ modo: "top", n: "15", umbral: "200" });
@@ -150,7 +151,7 @@
   function nuevoMiembro(id) { return { id, perfil: "", cargo: "", rol: "miembro", justificacion: "", nombre: "" }; }
   function nuevaSesion(id) { return { id, fecha: "", actividad: "", duracion: "", asistentes: [], resultados: "" }; }
   // manual: "" = lo decide el criterio; "si" / "no" = el equipo lo marca o lo desmarca a mano (con motivo)
-  function nuevoFallo(id, n = 0) { return { id, num: n, subprocesoId: "", fallo: "", efecto: "", causa: "", controles: "", g: "", o: "", d: "", critico: false, motivoCritico: "", manual: "", motivo: "", acciones: [], residual: nuevoResidual() }; }
+  function nuevoFallo(id, n = 0) { return { id, num: n, subprocesoId: "", fallo: "", efecto: "", causa: "", controles: "", g: "", o: "", d: "", critico: false, motivoCritico: "", manual: "", motivo: "", acciones: [], residual: nuevoResidual(), votos: [] }; }
   // Control del documento (como en el Documento Final): elaborado, revisado, aprobado e histórico de revisiones
   function nuevaPersona() { return { nombre: "", cargo: "" }; }
   function nuevoControl() { return { elaborado: [nuevaPersona()], revisado: [nuevaPersona()], aprobado: [nuevaPersona()], historial: [{ edicion: "00", fecha: "", cambio: "Documento inicial" }] }; }
@@ -275,6 +276,8 @@
       if (d && d <= 2 && !lleno(f.controles)) A.push({ nivel: "warn", fallo: f.id, texto: `Nº ${f.num}: detección ${d} significa que el fallo se descubre casi seguro antes de causar daño, pero no hay controles escritos. ¿Quién o qué lo detecta? Recuerda: la detección va al revés.` });
       if (d && d >= 9 && lleno(f.controles)) A.push({ nivel: "nota", fallo: f.id, texto: `Nº ${f.num}: detección ${d} (casi imposible de detectar) aunque hay controles escritos. ¿No sirven para descubrirlo a tiempo? Si sí sirven, la D debería ser más baja.` });
       if (g && g >= 9) A.push({ nivel: "nota", fallo: f.id, texto: `Nº ${f.num} tiene gravedad ${g}: merece atención aunque su IPR no salga de los primeros. Un fallo muy grave no se deja fuera por ser raro o fácil de detectar.` });
+      const dis = discrepancia(f);
+      if (dis.length) A.push({ nivel: "warn", fallo: f.id, texto: `Nº ${f.num}: los votos del equipo están muy separados en ${listaY(dis.map(k => ESCALA_NOM[k].toLowerCase()))} (4 puntos o más entre el más alto y el más bajo). Habladlo antes de cerrar el valor: puede que no todos imaginéis el mismo fallo.` });
     });
     const P = F.filter(iprDe);
     if (P.length >= 6) {
@@ -478,7 +481,119 @@
     return partes.join(" ");
   }
 
-  function avisos(a, hoy = "") { return [...avisosProceso(a), ...avisosEquipo(a), ...avisosFallos(a), ...avisosPuntuar(a), ...avisosPriorizar(a), ...avisosMejorar(a, hoy), ...avisosCerrar(a)]; }
+  // ---------- Encontrar los fallos (paso 3): lluvia de ideas y técnica de grupo nominal ----------
+  const PREGUNTAS_GUIA = ["¿Qué puede salir mal en este paso?", "¿Qué errores hemos visto en el pasado?", "¿Qué fallos podríamos prever?", "¿Qué pasa si falta alguien, algo o hay prisa?", "¿Dónde se pierde o se confunde información?"];
+  const MODOS_TGN = { "321": { nom: "3, 2 y 1 puntos", que: "Cada persona elige los tres bloques que le parecen más importantes y les da 3, 2 y 1 puntos (como en el curso)." }, "1a10": { nom: "Del 1 al 10", que: "Cada persona puntúa todos los bloques del 1 al 10." } };
+  function nuevaTgn() { return { modo: "321", votos: [] }; }
+  function nuevaIdea(id, subprocesoId = "") { return { id, subprocesoId, texto: "", bloqueId: "", falloId: "" }; }
+  function nuevoBloque(id, nombre = "") { return { id, nombre, comentario: "" }; }
+  // Palabras con contenido (sin artículos ni preposiciones) para comparar ideas
+  const VACIAS = new Set("el la los las un una unos unas de del al a en y o u que se no por con sin para su sus lo le les es son muy mas".split(" "));
+  const palabras = s => normal(s).split(" ").filter(w => w.length > 2 && !VACIAS.has(w));
+  function parecidas(x, y) {
+    const A = new Set(palabras(x)), B = new Set(palabras(y)); if (!A.size || !B.size) return false;
+    const comunes = [...A].filter(w => B.has(w)).length;
+    return comunes / Math.min(A.size, B.size) >= 0.6;
+  }
+  // Parejas de ideas que parecen la misma (para agrupar o quitar duplicados)
+  function duplicados(ideas) {
+    const l = ideas.filter(i => lleno(i.texto)), r = [];
+    for (let i = 0; i < l.length; i++) for (let j = i + 1; j < l.length; j++) if (parecidas(l[i].texto, l[j].texto)) r.push([l[i], l[j]]);
+    return r;
+  }
+  // Recuento del grupo nominal: total de puntos por bloque, de mayor a menor (a igual total, más votos)
+  function ranking(a) {
+    return a.bloques.map((b, i) => { const v = a.tgn.votos.filter(x => x.bloqueId === b.id).map(x => num(x.puntos)).filter(n => Number.isFinite(n) && n > 0); return { b, i, total: v.reduce((s, n) => s + n, 0), votos: v.length, ideas: a.ideas.filter(x => x.bloqueId === b.id).length }; })
+      .sort((x, y) => y.total - x.total || y.votos - x.votos || x.i - y.i);
+  }
+  // Voto 3-2-1: qué bloque ha recibido de un miembro cada valor (3, 2, 1)
+  const voto321 = (a, miembroId, puntos) => { const v = a.tgn.votos.find(x => x.miembroId === miembroId && String(x.puntos) === String(puntos)); return v ? v.bloqueId : ""; };
+  function ponerVoto321(a, miembroId, puntos, bloqueId) {
+    // Un valor por miembro, y un bloque no puede recibir dos valores del mismo miembro
+    a.tgn.votos = a.tgn.votos.filter(x => !(x.miembroId === miembroId && (String(x.puntos) === String(puntos) || (bloqueId && x.bloqueId === bloqueId))));
+    if (bloqueId) a.tgn.votos.push({ miembroId, bloqueId, puntos: String(puntos) });
+  }
+  const voto1a10 = (a, miembroId, bloqueId) => { const v = a.tgn.votos.find(x => x.miembroId === miembroId && x.bloqueId === bloqueId); return v ? v.puntos : ""; };
+  function ponerVoto1a10(a, miembroId, bloqueId, puntos) {
+    a.tgn.votos = a.tgn.votos.filter(x => !(x.miembroId === miembroId && x.bloqueId === bloqueId));
+    if (lleno(puntos)) a.tgn.votos.push({ miembroId, bloqueId, puntos: String(puntos).trim() });
+  }
+  // Una idea se convierte en modo de fallo (en su subproceso); la idea guarda el fallo creado
+  function ideaAFallo(a, idea, genId) {
+    if (idea.falloId && a.fallos.some(f => f.id === idea.falloId)) return null;
+    const f = Object.assign(nuevoFallo(genId(), siguienteNum(a)), { subprocesoId: idea.subprocesoId, fallo: idea.texto.trim() });
+    a.fallos.push(f); idea.falloId = f.id; return f;
+  }
+  function avisosIdeas(a) {
+    const A = [], I = a.ideas.filter(i => lleno(i.texto)), M = a.equipo.filter(m => lleno(m.perfil));
+    if (!a.subprocesos.filter(s => lleno(s.nombre)).length) A.push({ nivel: "nota", texto: "Define primero los subprocesos (paso 1): la lluvia de ideas se hace subproceso a subproceso." });
+    if (!I.length) { A.push({ nivel: "nota", texto: "Apuntad todas las ideas sin juzgarlas: «¿qué puede salir mal en este paso?». Se puede pedir tres ideas a cada persona." }); return A.map(x => Object.assign({ paso: 3 }, x)); }
+    const sinSub = I.filter(i => !a.subprocesos.some(s => s.id === i.subprocesoId)).length;
+    if (sinSub) A.push({ nivel: "nota", texto: `${sinSub === 1 ? "Una idea no tiene" : sinSub + " ideas no tienen"} subproceso.` });
+    duplicados(I).slice(0, 5).forEach(([x, y]) => A.push({ nivel: "nota", texto: `«${corto(x.texto, 50)}» y «${corto(y.texto, 50)}» parecen la misma idea. Agrupadlas en el mismo bloque o quitad una.` }));
+    const sinBloque = I.filter(i => !a.bloques.some(b => b.id === i.bloqueId)).length;
+    if (I.length >= 4 && sinBloque) A.push({ nivel: "nota", texto: `${sinBloque === 1 ? "Una idea está" : sinBloque + " ideas están"} sin agrupar. Agruparlas en bloques ayuda a ver los temas y a votar.` });
+    if (a.bloques.length >= 2 && M.length) {
+      const R = ranking(a), votaron = new Set(a.tgn.votos.map(v => v.miembroId)), faltan = M.filter(m => !votaron.has(m.id));
+      if (votaron.size && faltan.length) A.push({ nivel: "nota", texto: `Falta el voto de ${faltan.length === 1 ? "un miembro" : faltan.length + " miembros"} del equipo (${faltan.map(m => corto(m.perfil, 30)).join(", ")}).` });
+      if (votaron.size) {
+        if (a.tgn.modo === "321") M.forEach(m => { const n = [3, 2, 1].filter(p => voto321(a, m.id, p)).length; if (n && n < 3) A.push({ nivel: "nota", texto: `${corto(m.perfil, 40)} ha repartido ${n} de sus 3 votos.` }); });
+        const malos = a.tgn.modo === "1a10" ? a.tgn.votos.filter(v => !entero1a10(v.puntos)).length : 0;
+        if (malos) A.push({ nivel: "error", texto: "Los votos del 1 al 10 tienen que ser números enteros del 1 al 10." });
+        const ignorados = R.filter(r => !r.total && !lleno(r.b.comentario));
+        if (ignorados.length) A.push({ nivel: "nota", texto: `${ignorados.length === 1 ? "Un bloque no ha recibido" : ignorados.length + " bloques no han recibido"} ningún voto. Comentadlos también: a veces esconden un riesgo grave que nadie quiso destacar (en el curso, «No evaluación del riesgo de caída»).` });
+      }
+    }
+    const pendientes = I.filter(i => !i.falloId || !a.fallos.some(f => f.id === i.falloId)).length;
+    if (pendientes && a.tgn.votos.length) A.push({ nivel: "nota", texto: `${pendientes === 1 ? "Queda una idea" : "Quedan " + pendientes + " ideas"} sin pasar a fallos. Las que el grupo considere importantes pasan al paso 4 como modos de fallo.` });
+    return A.map(x => Object.assign({ paso: 3 }, x));
+  }
+
+  // ---------- Votación del equipo para G·O·D (mejora A) ----------
+  // La media se redondea al entero (0,5 hacia arriba); si entre el voto más alto y el más bajo hay 4 puntos o más, hay que hablarlo
+  function mediaVotos(f) {
+    const r = {};
+    ["g", "o", "d"].forEach(k => {
+      const v = f.votos.map(x => entero1a10(x[k])).filter(Boolean);
+      r[k] = v.length ? { n: v.length, media: Math.round(v.reduce((s, x) => s + x, 0) / v.length), exacta: v.reduce((s, x) => s + x, 0) / v.length, rango: Math.max(...v) - Math.min(...v) } : null;
+    });
+    return r;
+  }
+  const discrepancia = f => ["g", "o", "d"].filter(k => { const m = mediaVotos(f)[k]; return m && m.n >= 2 && m.rango >= 4; });
+  function ponerVotoGOD(f, miembroId, k, valor) {
+    let v = f.votos.find(x => x.miembroId === miembroId);
+    if (!v) { v = { miembroId, g: "", o: "", d: "" }; f.votos.push(v); }
+    v[k] = String(valor).trim();
+    f.votos = f.votos.filter(x => [x.g, x.o, x.d].some(lleno));
+  }
+
+  // ---------- Ediciones y revisión periódica (mejora G) ----------
+  // Una nueva edición copia el AMFE entero (mismos ids de fallos, para poder comparar) y la enlaza con la anterior
+  function nuevaEdicion(a, genId, fechaIso) {
+    const c = JSON.parse(JSON.stringify(a)), ed = String((parseInt(a.edicion, 10) || 0) + 1).padStart(2, "0");
+    Object.assign(c, { id: genId(), edicion: ed, anteriorId: a.id, proxRevision: "", conclusiones: "", creado: fechaIso, modificado: fechaIso });
+    c.control.historial.push({ edicion: ed, fecha: fechaIso.slice(0, 10), cambio: "Revisión periódica del AMFE" });
+    return c;
+  }
+  function compararEdiciones(ant, act) {
+    const filas = [], vistos = new Set();
+    act.fallos.filter(f => lleno(f.fallo)).forEach(f => {
+      const g = ant.fallos.find(x => x.id === f.id) || null; if (g) vistos.add(g.id);
+      const v0 = g ? iprDe(g) : null, v1 = iprDe(f);
+      filas.push({ num: f.num, fallo: f.fallo, antes: v0, ahora: v1, cambio: !g ? "nuevo" : !v0 || !v1 ? "sin" : v1 < v0 ? "baja" : v1 > v0 ? "sube" : "igual" });
+    });
+    ant.fallos.filter(f => lleno(f.fallo) && !vistos.has(f.id)).forEach(f => filas.push({ num: f.num, fallo: f.fallo, antes: iprDe(f), ahora: null, cambio: "quitado" }));
+    const cuenta = k => filas.filter(x => x.cambio === k).length;
+    return { filas: filas.sort((x, y) => x.num - y.num), baja: cuenta("baja"), sube: cuenta("sube"), igual: cuenta("igual"), nuevo: cuenta("nuevo"), quitado: cuenta("quitado") };
+  }
+  // ¿Toca revisar? (fecha de próxima revisión pasada o en los próximos 30 días)
+  function revisionProxima(a, hoyIso) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(a.proxRevision || "")) return null;
+    const dias = Math.round((new Date(a.proxRevision) - new Date(hoyIso)) / 864e5);
+    return dias <= 30 ? { dias, vencida: dias < 0 } : null;
+  }
+
+  function avisos(a, hoy = "") { return [...avisosProceso(a), ...avisosEquipo(a), ...avisosIdeas(a), ...avisosFallos(a), ...avisosPuntuar(a), ...avisosPriorizar(a), ...avisosMejorar(a, hoy), ...avisosCerrar(a)]; }
 
   // ---------- Resumen y progreso ----------
   function resumen(a) {
@@ -493,7 +608,7 @@
     return {
       1: lleno(a.proceso) && subs.length >= 2,
       2: a.equipo.filter(m => lleno(m.perfil)).length >= 3,
-      3: false,
+      3: a.ideas.some(i => lleno(i.texto) && i.falloId && a.fallos.some(f => f.id === i.falloId)),
       4: F.length >= 1 && F.every(f => subDe(a, f)),
       5: F.length >= 1 && F.every(f => iprDe(f)),
       6: F.length >= 1 && F.every(f => iprDe(f)) && prioritarios(a).length >= 1 && !avisosPriorizar(a).some(x => x.nivel === "warn" && x.fallo && /motivo/.test(x.texto)),
@@ -702,6 +817,29 @@
     return { titulo: "AMFE · Resumen · " + nom, bloques: B };
   }
 
+  // Hoja de trabajo para las sesiones presenciales (mejora F): escalas, lluvia de ideas, análisis y votación
+  function documentoHoja(a, fecha, vacias = 4) {
+    const B = [], nom = a.proceso || a.titulo || "Proceso", SUB = a.subprocesos.filter(s => lleno(s.nombre)), F = a.fallos.filter(f => lleno(f.fallo));
+    const L_ = n => Array.from({ length: n }, () => " ");
+    B.push({ t: "portada", titulo: "AMFE · Hoja de trabajo", sub: nom, extra: [a.unidad, "Sesión del ____ / ____ / ________", "Asistentes: ____________________________________________"].filter(lleno) });
+    B.push({ t: "h1", texto: "Escalas de puntuación" }, { t: "tabla", fuente: 8, cab: ["Puntos", "Gravedad", "Ocurrencia", "Detección (¡al revés!)"], anchos: [10, 30, 30, 30], filas: TRAMOS.map((t, i) => [{ texto: t, centro: true, negrita: true }, a.escalas.g[i], a.escalas.o[i], a.escalas.d[i]]) },
+      { t: "p", estilo: "nota", texto: "IPR = Gravedad × Ocurrencia × Detección. Detección: 1 = se detecta casi seguro antes de causar daño; 10 = casi imposible de detectar." });
+    B.push({ t: "salto" }, { t: "h1", texto: "1. Lluvia de ideas: ¿qué puede salir mal?" }, { t: "p", texto: "Sin juzgar ni debatir. Una idea por línea. Preguntas guía: " + PREGUNTAS_GUIA.join(" ") });
+    (SUB.length ? SUB : [{ nombre: "Subproceso: ______________________" }]).forEach((s, i) => B.push({ t: "h2", texto: SUB.length ? `${i + 1}. ${s.nombre}` : s.nombre }, { t: "tabla", fuente: 9, cab: ["Idea", "Bloque"], anchos: [78, 22], filas: [...a.ideas.filter(x => x.subprocesoId === s.id && lleno(x.texto)).map(x => [x.texto, (a.bloques.find(b => b.id === x.bloqueId) || {}).nombre || ""]), ...L_(vacias + 2).map(() => [" ", " "])] }));
+    if (a.bloques.length) {
+      B.push({ t: "h2", texto: "Técnica de grupo nominal: reparte 3, 2 y 1 puntos" }, { t: "tabla", fuente: 9, cab: ["Bloque", "Mis puntos (3, 2 o 1)"], anchos: [75, 25], filas: a.bloques.map(b => [b.nombre, " "]) });
+    }
+    B.push({ t: "salto" }, { t: "h1", texto: "2. Análisis de cada fallo" });
+    (SUB.length ? SUB : [{ id: "", nombre: "Subproceso: ______________________" }]).forEach((s, i) => {
+      const l = ordenarFallos(F.filter(f => f.subprocesoId === s.id), "num");
+      B.push({ t: "h2", texto: SUB.length ? `${i + 1}. ${s.nombre}` : s.nombre }, { t: "tabla", fuente: 8, cab: ["Nº", "Modo de fallo", "Efecto", "Causa", "Controles actuales", "G", "O", "D", "IPR"], anchos: [5, 21, 18, 18, 18, 5, 5, 5, 5],
+        filas: [...l.map(f => [{ texto: String(f.num), centro: true }, f.fallo, f.efecto, f.causa, f.controles, { texto: f.g, centro: true }, { texto: f.o, centro: true }, { texto: f.d, centro: true }, { texto: String(iprDe(f) || ""), centro: true }]), ...L_(vacias).map(() => L_(9))] });
+    });
+    B.push({ t: "salto" }, { t: "h1", texto: "3. Mi votación de G, O y D" }, { t: "p", texto: "Perfil o nombre: ______________________________. Puntúa cada fallo de 1 a 10 sin hablar con los demás; después se comparan los votos y se calcula la media." },
+      { t: "tabla", fuente: 8, cab: ["Nº", "Modo de fallo", "G", "O", "D"], anchos: [6, 64, 10, 10, 10], filas: [...ordenarFallos(F, "sub", a.subprocesos).map(f => [{ texto: String(f.num), centro: true }, f.fallo, " ", " ", " "]), ...L_(vacias).map(() => L_(5))] });
+    return { titulo: "AMFE · Hoja de trabajo · " + nom, bloques: B };
+  }
+
   // ---------- Excel ----------
   const ESTILOS_XLSX = {
     titulo: { negrita: true, tamano: 14, colorTexto: "FFFFFF", colorFondo: "9A3F06", borde: false },
@@ -783,7 +921,12 @@
     subproceso: { id: "id", nombre: [200], descripcion: [1000], inicio: [300], fin: [300], roles: [500], color: { en: Array.from({ length: COLORES_SUB }, (_, i) => String(i)) } },
     miembro: { id: "id", perfil: [200], cargo: [200], rol: { en: Object.keys(ROLES) }, justificacion: [1000], nombre: [200] },
     sesion: { id: "id", fecha: [20], actividad: [500], duracion: [40], asistentes: { lista: "ref", max: 40 }, resultados: [1500] },
-    fallo: { id: "id", num: "ent", subprocesoId: "ref", fallo: [1000], efecto: [1000], causa: [1000], controles: [1000], g: [3], o: [3], d: [3], critico: "b", motivoCritico: [1000], manual: { en: ["", "si", "no"] }, motivo: [1000], acciones: { de: "accion", max: 20 }, residual: { obj: "residual" } },
+    fallo: { id: "id", num: "ent", subprocesoId: "ref", fallo: [1000], efecto: [1000], causa: [1000], controles: [1000], g: [3], o: [3], d: [3], critico: "b", motivoCritico: [1000], manual: { en: ["", "si", "no"] }, motivo: [1000], acciones: { de: "accion", max: 20 }, residual: { obj: "residual" }, votos: { de: "votoGOD", max: 40 } },
+    votoGOD: { miembroId: "ref", g: [3], o: [3], d: [3] },
+    idea: { id: "id", subprocesoId: "ref", texto: [500], bloqueId: "ref", falloId: "ref" },
+    bloque: { id: "id", nombre: [200], comentario: [1000] },
+    votoTgn: { miembroId: "ref", bloqueId: "ref", puntos: [3] },
+    tgn: { modo: { en: Object.keys(MODOS_TGN) }, votos: { de: "votoTgn", max: 2000 } },
     prioridad: { modo: { en: ["top", "umbral"] }, n: [4], umbral: [5] },
     indicador: { nombre: [500], formula: [1000], estandar: [60], fuente: [500] },
     comprobacion: Object.fromEntries(Object.keys(COMPROBACION).map(k => [k, "b"])),
@@ -793,9 +936,9 @@
     revision: { edicion: [10], fecha: [20], cambio: [500] },
     control: { elaborado: { de: "persona", max: 10 }, revisado: { de: "persona", max: 10 }, aprobado: { de: "persona", max: 10 }, historial: { de: "revision", max: 50 } },
     amfe: { id: "id", titulo: [200], proceso: [300], unidad: [200], objetivo: [2000], inicio: [300], fin: [300], incluye: [2000], excluye: [2000], responsable: [300], fecha: [40],
-      subprocesos: { de: "subproceso", max: 40 }, equipo: { de: "miembro", max: 40 }, sesiones: { de: "sesion", max: 40 }, fallos: { de: "fallo", max: 500 }, escalas: { obj: "escalas" }, prioridad: { obj: "prioridad" }, introduccion: [4000], conclusiones: [5000], control: { obj: "control" }, proxRevision: [20], notas: [3000], creado: [40], modificado: [40] }
+      subprocesos: { de: "subproceso", max: 40 }, equipo: { de: "miembro", max: 40 }, sesiones: { de: "sesion", max: 40 }, fallos: { de: "fallo", max: 500 }, escalas: { obj: "escalas" }, prioridad: { obj: "prioridad" }, introduccion: [4000], conclusiones: [5000], control: { obj: "control" }, proxRevision: [20], edicion: [4], anteriorId: "ref", ideas: { de: "idea", max: 500 }, bloques: { de: "bloque", max: 60 }, tgn: { obj: "tgn" }, notas: [3000], creado: [40], modificado: [40] }
   };
-  const FABRICA = { escalas: nuevasEscalas, prioridad: nuevaPrioridad, indicador: nuevoIndicador, comprobacion: nuevaComprobacion, accion: nuevaAccion, residual: nuevoResidual, persona: nuevaPersona, revision: () => ({ edicion: "", fecha: "", cambio: "" }), control: () => ({ elaborado: [], revisado: [], aprobado: [], historial: [] }), subproceso: id => nuevoSubproceso(id), miembro: nuevoMiembro, sesion: nuevaSesion, fallo: id => nuevoFallo(id), amfe: id => nuevoAmfe(id, "") };
+  const FABRICA = { votoGOD: () => ({ miembroId: "", g: "", o: "", d: "" }), idea: id => nuevaIdea(id), bloque: id => nuevoBloque(id), votoTgn: () => ({ miembroId: "", bloqueId: "", puntos: "" }), tgn: nuevaTgn, escalas: nuevasEscalas, prioridad: nuevaPrioridad, indicador: nuevoIndicador, comprobacion: nuevaComprobacion, accion: nuevaAccion, residual: nuevoResidual, persona: nuevaPersona, revision: () => ({ edicion: "", fecha: "", cambio: "" }), control: () => ({ elaborado: [], revisado: [], aprobado: [], historial: [] }), subproceso: id => nuevoSubproceso(id), miembro: nuevoMiembro, sesion: nuevaSesion, fallo: id => nuevoFallo(id), amfe: id => nuevoAmfe(id, "") };
   function sanear(esq, o, genId) {
     if (!o || typeof o !== "object" || Array.isArray(o)) return null;
     const S = ESQ[esq], r = FABRICA[esq](genId());
@@ -821,6 +964,12 @@
     const subs = new Set(a.subprocesos.map(s => s.id)), miembros = new Set(a.equipo.map(m => m.id));
     a.fallos.forEach(f => { if (!subs.has(f.subprocesoId)) f.subprocesoId = ""; });
     a.sesiones.forEach(s => { s.asistentes = s.asistentes.filter(id => miembros.has(id)); });
+    // Ideas, bloques y votos: fuera las referencias a lo que ya no existe
+    const bloques = new Set(a.bloques.map(b => b.id)), fallos = new Set(a.fallos.map(f => f.id));
+    a.ideas.forEach(i => { if (!subs.has(i.subprocesoId)) i.subprocesoId = ""; if (!bloques.has(i.bloqueId)) i.bloqueId = ""; if (!fallos.has(i.falloId)) i.falloId = ""; });
+    a.tgn.votos = a.tgn.votos.filter(v => miembros.has(v.miembroId) && bloques.has(v.bloqueId));
+    a.fallos.forEach(f => { f.votos = f.votos.filter(v => miembros.has(v.miembroId)); });
+    if (!lleno(a.edicion)) a.edicion = "00";
     const usados = new Set();
     a.fallos.forEach(f => { if (!f.num || usados.has(f.num)) f.num = 0; else usados.add(f.num); });
     a.fallos.filter(f => !f.num).forEach(f => { f.num = siguienteNum(a); });
@@ -850,6 +999,8 @@
     FORMATO_INTERCAMBIO, VERSION_INTERCAMBIO, paqueteIntercambio, leerIntercambio, ESTILOS_XLSX, hojasExcel,
     fmtFecha, TIPOS_ACCION, CLASES_ACCION, ACTUA, COMPROBACION, ESTADOS_ACCION, cuentaEstado, FUERZAS, fuerzaMedida,
     nuevaAccion, nuevoIndicador, nuevoResidual, nuevaPersona, nuevoControl, iprResidual, vencida, accionCompleta, accionesDe, conAcciones, sugerirPorque, indicadoresDe,
+    PREGUNTAS_GUIA, MODOS_TGN, nuevaIdea, nuevoBloque, duplicados, parecidas, ranking, voto321, ponerVoto321, voto1a10, ponerVoto1a10, ideaAFallo, avisosIdeas,
+    mediaVotos, discrepancia, ponerVotoGOD, nuevaEdicion, compararEdiciones, revisionProxima, documentoHoja,
     avisosMejorar, avisosCerrar, resumenMejora, conclusionesSugeridas, introduccionSugerida, documentoInforme, documentoResumen,
     resumen, progreso, pasoPendiente, siguientePaso,
     parsearTabla, incorporarFilas,

@@ -53,10 +53,10 @@
       secciones: [
         { t: "Lluvia de ideas, paso a paso", h: `<ol><li>Explicar el objetivo y el proceso que se analiza.</li><li>Generar ideas sin juzgarlas («¿qué puede salir mal en este paso?», «¿qué errores hemos visto?», «¿qué fallos podríamos prever?»). Se puede pedir tres ideas a cada persona.</li><li>Anotarlas todas a la vista del grupo.</li><li>Aclararlas, agruparlas por temas y quitar duplicados.</li></ol>` },
         { t: "Técnica de grupo nominal, paso a paso", h: `<ol><li>Presentar todas las ideas o bloques.</li><li>Votar de forma individual: por ejemplo, cada persona reparte 3, 2 y 1 puntos entre los tres bloques que le parecen más importantes.</li><li>Sumar y ordenar.</li><li>Comentar el resultado en grupo (y repetir la votación si hace falta).</li></ol>
-          <div class="box box--practica"><span class="box-tag">En la práctica</span><p>En la app, el paso 3 («Encontrar los fallos») llegará en una próxima versión con la lluvia de ideas por subproceso y el recuento de votos.</p></div>` }
+          <div class="box box--practica"><span class="box-tag">En la práctica</span><p>En la app, el paso 3 («Encontrar los fallos») recoge las ideas por subproceso, las agrupa en bloques, hace el recuento de votos y pasa las ideas elegidas a fallos con un toque. Con el «modo reunión» se proyecta con letra grande, y la «hoja de trabajo» se imprime para las sesiones presenciales.</p></div>` }
       ],
       minicaso: `<p>Con el caso clínico de Urgencias, un grupo votó 12 bloques de causas. «Identificación del paciente» sumó 11 puntos; «Historia clínica incompleta / fármacos», 6; «Fallos en la detección de sepsis», 5. «No evaluación del riesgo de caída» no recibió ningún voto… pero al comentarlo el grupo reconoció que era un fallo de seguridad estructural.</p>`,
-      practica: { texto: "Ver los fallos del ejemplo", href: "#/amfe/ej-amfe-urg/4" } },
+      practica: { texto: "Ver la lluvia de ideas del ejemplo", href: "#/amfe/ej-amfe-urg/3" } },
 
     { n: 4, c: "H", titulo: "Fallo, efecto y causa", sub: "Tres preguntas distintas que no hay que mezclar",
       minuto: [
@@ -271,6 +271,41 @@
   ];
   // G·O·D esperados tras las acciones (añadidos para el ejemplo; la gravedad no cambia)
   const RESIDUAL_URG = { 10: [7, 4, 3], 8: [8, 5, 4], 5: [7, 6, 3], 15: [7, 5, 4], 29: [7, 3, 4], 9: [7, 4, 4], 23: [7, 4, 4], 36: [7, 5, 3], 45: [7, 4, 5] };
+  // Lluvia de ideas del ejercicio 2 resuelto (caso clínico de Urgencias), en los 12 bloques del ejercicio y repartida por subprocesos.
+  // [bloque (índice), subproceso (índice), idea, nº del fallo al que se pasó (0 = ninguno)]
+  const BLOQUES_URG = [
+    ["Identificación del paciente", "Es la base de todo. Sin una correcta identificación puede haber errores en medicación, pruebas, etc."],
+    ["Historia clínica incompleta / fármacos", "La falta de información sobre medicación y antecedentes limita la capacidad del clínico para decidir y aumenta el riesgo de errores terapéuticos."],
+    ["Fallos en la detección de sepsis", "Las constantes alteradas pasaron desapercibidas. No activar el protocolo de sepsis puede tener consecuencias graves."],
+    ["Errores administrativos", "No se ha puntuado, posiblemente por percibirse como menor. Sin embargo, un error en la identificación puede originar fallos en cadena."],
+    ["Comunicación clínica ineficaz", "Más de una hora sin supervisión con signos de gravedad: eso no puede pasar desapercibido."],
+    ["Omisión del deterioro cognitivo", "A pesar de su baja puntuación, desconocer el estado cognitivo dificultó la valoración y llevó a decisiones inadecuadas."],
+    ["Condiciones físicas inadecuadas (frío, ruido…)", "No se ha puntuado, aunque la paciente se quejaba de frío, dolor y ruido. Afecta a su experiencia y puede agravar su estado."],
+    ["Falta de registro de información relevante", "Baja puntuación, pero es una condición transversal que impide el seguimiento del caso y la coordinación entre profesionales."],
+    ["No evaluación del riesgo de caída", "Ignorado en la votación, pero esencial: la movilidad no valorada y la ayuda prestada por otra paciente muestran un fallo de seguridad estructural."],
+    ["No ayuda para necesidades básicas", "No puntuado; sin embargo, que la paciente fuera sola al baño es una señal de alerta."],
+    ["Demora y ausencia de reevaluación en espera", "El tiempo prolongado en sala de espera sin reevaluación muestra un fallo organizativo con impacto clínico."],
+    ["Errores en el protocolo de pulsera", "La pérdida de la pulsera es una señal de alerta grave que expone a errores de identificación."]
+  ];
+  const IDEAS_URG = [
+    [0, 0, "No se verificó bien la identidad del paciente", 2], [0, 1, "No se colocó la pulsera identificativa", 11], [0, 4, "Confusión de camillas al volver de radiología", 30], [0, 4, "Pérdida de la pulsera de identificación", 29],
+    [1, 1, "No se preguntó por su medicación habitual", 12], [1, 0, "Nadie recogió las alergias", 3], [1, 3, "Anamnesis incompleta por no estar presente la hija", 22],
+    [2, 1, "No se identificó el riesgo de sepsis con las constantes alteradas", 8], [2, 1, "Constantes alteradas registradas pero no valoradas", 10],
+    [3, 0, "No se corrigió el error en el segundo apellido", 1], [3, 0, "Datos administrativos aportados por la vecina sin comprobar", 0],
+    [4, 5, "Nadie explicó el plan asistencial a la paciente", 38], [4, 5, "Se le habló demasiado rápido y no entendía", 39], [4, 6, "No sabía si se quedaba ingresada o no", 0],
+    [5, 1, "Nadie mencionó su deterioro cognitivo", 9], [5, 4, "No se avisó al celador de su deterioro cognitivo", 32], [5, 0, "El deterioro no figuraba en su ficha", 7],
+    [6, 2, "Sala de espera muy fría", 17], [6, 2, "Mucho ruido, difícil descansar", 0],
+    [7, 3, "No quedó registrado si llevaba medicación activa", 27],
+    [8, 2, "No se evaluó el riesgo de caída pese a la edad y el deterioro", 16],
+    [9, 2, "Fue sola al baño sin ayuda disponible", 21], [9, 2, "Otra paciente tuvo que ayudarla", 0],
+    [10, 2, "Esperó 75 minutos sin revisión", 15], [10, 2, "Nadie la reevaluó pese a que empeoraba", 0],
+    [11, 1, "Se pidió una pulsera nueva pero no se priorizó su colocación", 0]
+  ];
+  // Votos de la técnica de grupo nominal del ejercicio 3 resuelto (5 personas; 3, 2 y 1 puntos), asignados a los cinco primeros miembros del equipo
+  // [miembro (índice), bloque (índice), puntos]
+  const VOTOS_URG = [[0, 0, 2], [0, 1, 3], [0, 2, 1], [1, 0, 3], [1, 1, 2], [1, 5, 1], [2, 0, 3], [2, 4, 2], [2, 2, 1], [3, 0, 3], [3, 10, 2], [3, 7, 1], [4, 2, 3], [4, 11, 2], [4, 1, 1]];
+  // Votación individual de G·O·D en el fallo nº 10 (añadida para el ejemplo): media 7-7-7, con discrepancia en la detección
+  const VOTOS_GOD_URG = { 10: [[0, 7, 7, 9], [1, 8, 7, 7], [2, 6, 8, 5], [3, 7, 6, 7], [4, 7, 7, 7]] };
   function amfeUrgencias() {
     const subs = SUBS_URG.map(([nombre, descripcion, inicio, fin, roles], i) => ({ id: "ej-urg-s" + (i + 1), nombre, descripcion, inicio, fin, roles, color: String(i) }));
     const equipo = EQUIPO_URG.map(([perfil, cargo, rol, justificacion], i) => ({ id: "ej-urg-m" + (i + 1), perfil, cargo, rol, justificacion, nombre: "" }));
@@ -291,8 +326,13 @@
         const acc = ACCIONES_URG.filter(x => x[0] === num).map(([, que, porque, donde, plazo, fin, quien, como, tipo, clase, actuaSobre, nombre, estandar, fuente, estado], i) => ({ id: `ej-urg-a${num}-${i + 1}`, que, porque, donde, plazo, fin, quien, como, tipo, clase, actuaSobre, indicador: { nombre, formula: "", estandar, fuente }, comprobacion: { especifica: true, factible: true, medible: true, sostenible: estado === "verificada", aceptable: true }, estado, nota: "" }));
         const r = RESIDUAL_URG[num];
         return { id: "ej-urg-f" + num, num, subprocesoId: subs[s].id, fallo, efecto, causa, controles: CONTROLES_URG[num] || "", g: String(g), o: String(o), d: String(d),
-          acciones: acc, residual: r ? { g: String(r[0]), o: String(r[1]), d: String(r[2]), fecha: "", nota: "Esperado cuando la acción esté implantada" } : { g: "", o: "", d: "", fecha: "", nota: "" } };
+          acciones: acc, residual: r ? { g: String(r[0]), o: String(r[1]), d: String(r[2]), fecha: "", nota: "Esperado cuando la acción esté implantada" } : { g: "", o: "", d: "", fecha: "", nota: "" },
+          votos: (VOTOS_GOD_URG[num] || []).map(([m, g, o, d]) => ({ miembroId: equipo[m].id, g: String(g), o: String(o), d: String(d) })) };
       }),
+      bloques: BLOQUES_URG.map(([nombre, comentario], i) => ({ id: "ej-urg-b" + (i + 1), nombre, comentario })),
+      ideas: IDEAS_URG.map(([b, s, texto, f], i) => ({ id: "ej-urg-i" + (i + 1), subprocesoId: subs[s].id, texto, bloqueId: "ej-urg-b" + (b + 1), falloId: f ? "ej-urg-f" + f : "" })),
+      tgn: { modo: "321", votos: VOTOS_URG.map(([m, b, p]) => ({ miembroId: equipo[m].id, bloqueId: "ej-urg-b" + (b + 1), puntos: String(p) })) },
+      edicion: "00", anteriorId: "",
       escalas: null,
       conclusiones: "El AMFE ha permitido identificar de forma sistemática 49 fallos potenciales en los 7 subprocesos de la atención en Urgencias y priorizarlos según su gravedad, su ocurrencia y su detección. Los 15 fallos de mayor IPR (de 343 a 180) se concentran en el triaje, la identificación del paciente y la continuidad de la información clínica. Se han propuesto acciones de mejora con responsable, plazo e indicador para los 9 primeros; si funcionan como se espera, su IPR bajaría a menos de la mitad. Estas acciones servirán de base para una auditoría interna de seguimiento, y el AMFE se usará también en la acogida de los nuevos profesionales y en las sesiones de seguridad del paciente.",
       control: {
@@ -302,7 +342,7 @@
         historial: [{ edicion: "00", fecha: "2025-11-04", cambio: "Documento inicial" }]
       },
       proxRevision: "2026-11-04",
-      notas: "Ejemplo basado en el Documento Final del Mapa de Riesgos de Urgencias y en los ejercicios resueltos del curso. Se han añadido para el ejemplo los controles actuales de los 15 fallos de mayor IPR y, en las acciones, el indicador, el estándar, el estado, la fecha de fin y la puntuación esperada tras las acciones. Las acciones cubren los 9 fallos que trabajan los ejercicios; quedan 6 prioritarios sin acción para practicar.",
+      notas: "Ejemplo basado en el Documento Final del Mapa de Riesgos de Urgencias y en los ejercicios resueltos del curso. Se han añadido para el ejemplo los controles actuales de los 15 fallos de mayor IPR y, en las acciones, el indicador, el estándar, el estado, la fecha de fin y la puntuación esperada tras las acciones. Las acciones cubren los 9 fallos que trabajan los ejercicios; quedan 6 prioritarios sin acción para practicar. La lluvia de ideas y la votación del grupo nominal son las de los ejercicios 2 y 3 (votos asignados a cinco miembros del equipo); la votación de G·O·D del fallo nº 10 se ha añadido para el ejemplo.",
       creado: "2025-11-04T12:00:00.000Z", modificado: "2025-11-04T12:00:00.000Z"
     };
   }
@@ -312,6 +352,7 @@
     fichas: [
       { t: "1 · El proceso", s: "7 subprocesos con su inicio, fin y roles", href: "#/amfe/ej-amfe-urg/1" },
       { t: "2 · El equipo", s: "10 perfiles y 3 sesiones de trabajo", href: "#/amfe/ej-amfe-urg/2" },
+      { t: "3 · Las ideas", s: "Lluvia de ideas en 12 bloques y grupo nominal", href: "#/amfe/ej-amfe-urg/3" },
       { t: "4 · Los fallos", s: "49 fallos con su efecto y su causa", href: "#/amfe/ej-amfe-urg/4" },
       { t: "5 · La puntuación", s: "G·O·D e IPR: del 343 al 36", href: "#/amfe/ej-amfe-urg/5" },
       { t: "6 · La priorización", s: "Los 15 de mayor IPR y la matriz de riesgos", href: "#/amfe/ej-amfe-urg/6" },
