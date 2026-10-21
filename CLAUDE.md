@@ -1,0 +1,76 @@
+# CLAUDE.md — AMFE
+
+> Documento común a todas las apps (lista, carpetas, identidad visual e intercambio de datos): `/Users/Trabajo/Desktop/Ecosistema Calidad/ECOSISTEMA.md`.
+
+Guía de referencia para el desarrollo asistido por IA. Léela antes de proponer cambios. Responder siempre en español y en lenguaje claro (el autor no es programador). El diseño completo, las decisiones del autor y el plan por entregas están en `/Users/Trabajo/Desktop/AMFE/Diseño/DISEÑO_AMFE.md` (léelo también al empezar una sesión).
+
+## 1. Descripción
+PWA estática (sin build, sin dependencias, sin CDN) para hacer, **paso a paso y de forma didáctica**, el **Análisis Modal de Fallos y Efectos (AMFE)** de cualquier proceso sanitario: proceso y subprocesos, equipo y sesiones, fallos con efecto, causa y controles actuales, puntuación G·O·D e IPR, priorización, acciones de mejora y reevaluación. Nace del curso «Elaboración de Mapas de Riesgo en Procesos Sanitarios» (material en `/Users/Trabajo/Desktop/Mapa de Riesgos/Curso Mapa de Riesgo/`). Herramienta docente y de apoyo; no sustituye el criterio profesional.
+
+Es una **herramienta** del ecosistema (funciona sola). La superaplicación **Mapa de Riesgos** y **Auditorías** podrán «Traer de AMFE» (formato `amfe-fallos`, entrega 2). Hermana de Auditorías, Indicadores y Tamaño Muestral: mismos tokens CSS, modo claro/oscuro, modales, SW network-first con aviso «Actualizar», vista imprimible y PDF en iOS.
+
+Autoría (idéntica en el pie de index.html, «Acerca de», `informePie()` en app.js y el README; orden alfabético, sin centro de trabajo): Carlos J. Galán Doval (Médico de Familia · Técnico en Calidad y Seguridad del Paciente) y Rafael J. Romero de Castilla Gil (Médico de Familia · Responsable del Área de Calidad y Seguridad del Paciente), Área de Gestión Sanitaria Sur de Córdoba · Andalucía.
+
+## 2. Arquitectura
+Base copiada de `Auditorías/Aplicación` (mismos patrones). Archivos:
+- `index.html` — esqueleto, cabecera, nav, franja de ejemplo, modales (bienvenida, Acerca de, novedades, confirmar), `<input type=file>` para importar. Script inline que fija `data-tema` antes de pintar.
+- `styles.css` — copiado de Auditorías con el **acento cambiado a naranja ámbar** (la variable sigue llamándose `--cyan` para no tocar las reglas heredadas: claro `#c2570c`, oscuro `#fb923c`, texto sobre acento en oscuro `#2a1405`, impreso `#9a3f06`). Bloque final «Componentes propios de AMFE»: colores de subproceso `.sub-c0`…`.sub-c7` (`--sc`; `.sub-cx` = sin subproceso), línea de 8 pasos `.wiz-steps--8`, tarjetas `.sub-card`, fallos `.fallo`, filas de puntuación `.punt`. Hay reglas heredadas que AMFE no usa: se pueden podar más adelante.
+- `logic.js` — funciones PURAS (`window.Logica` / `module.exports`): escalas del curso (`ESCALAS_CURSO`, `TRAMOS`, `tramo`), `ipr`, `iprDe`, `NIVELES_IPR`/`nivelIPR` (mismos cortes que Auditorías), **`zonaMatriz(g, o)`** (suma de tramos: 2–5 verde, 6 amarillo, 7–9 naranja, 10 rojo; sacado de la figura del Documento Final), `ordenarFallos` (IPR desc., a igual IPR más gravedad, luego nº; también por subproceso o nº), `puestos`, `PASOS` (con la entrega en que se activa cada uno), `ROLES`, `ESTAMENTOS`/`estamentoDe` (TCAE antes que enfermería), `PERFILES_SUG`, `SESIONES_TIPO`, fábricas (`nuevoAmfe`, `nuevoSubproceso`, `nuevoMiembro`, `nuevaSesion`, `nuevoFallo`), `siguienteNum`, `colorLibre`, `subDe`, `sugerirObjetivo`, **`tipoRedaccion`** (¿el fallo está escrito como causa o como efecto? patrones estrechos a propósito: «Falta de protocolo…» SÍ es modo de fallo), avisos por paso (`avisosProceso`, `avisosEquipo`, `avisosFallos`, `avisosPuntuar`; cada aviso lleva `paso` y, si es de un fallo, `fallo` = id), `resumen`, `progreso`, `pasoPendiente`, `siguientePaso`, `parsearTabla` (pegar desde Excel/Calc/Word; reconoce cabeceras, también «controles»), `incorporarFilas` (crea los subprocesos que falten), **saneado por esquema** (`ESQ` + `sanear`, `sanearAmfe`, `sanearDatos`) y `fusionar`.
+- `contenido.js` — solo datos (`window.Contenido`): `TEMAS` (Aprende, 7 temas; `c` = color P/H/V/A usado solo como color), `GLOSARIO`, `EJEMPLOS` (AMFE de Urgencias). HTML de confianza escrito a mano.
+- `app.js` — UI: datos, enrutado, inicio, lista, asistente de 8 pasos (`RENDER` = pasos construidos; el resto muestra `pasoProximo`), vista imprimible (`renderTabla`), Aprende, ejemplos, glosario, PDF iOS, copia/importar, tema, modales, SW. `ENTREGA` = pasos disponibles.
+- `sw.js` — network-first; sin `skipWaiting` al instalar.
+- `tests/logic.test.mjs` — `node tests/logic.test.mjs`. Incluye que el ejemplo de Urgencias reproduce los 49 IPR y el orden de los 15 primeros del ejercicio 11/12 resuelto.
+- Aún NO se usan `xlsx.js` ni `docx.js`: se copiarán de Auditorías en las entregas 2 (Excel) y 3 (Word).
+
+### Rutas (hash)
+`#/` inicio · `#/amfe` mis AMFE · `#/amfe/nuevo` (crea un borrador y redirige) · `#/amfe/<id>` (va al primer paso pendiente) · `#/amfe/<id>/<1-8>` (`?informe=1` = tabla AMFE imprimible) · `#/ejemplos` · `#/aprende` y `#/aprende/<1-7>` · `#/glosario`. Próximas: `#/prueba`.
+
+### Datos
+- `localStorage["amfe-datos"]` = `{ app: "amfe", v, ultimaCopia, amfes: [] }`. Guardado con 250 ms de retardo y al salir (`pagehide`).
+- Al cargar e importar se pasa SIEMPRE por `sanearDatos`. **Al añadir un campo nuevo**: añadirlo a la fábrica (`nuevoX`) y a `ESQ` en logic.js (si no, el saneado lo borra al recargar). Subir `VERSION_DATOS` solo si cambia el significado de algo ya guardado.
+- AMFE: `{ id, titulo, proceso, unidad, objetivo, inicio, fin, incluye, excluye, responsable, fecha, subprocesos: [{ id, nombre, descripcion, inicio, fin, roles, color: "0"–"7" }], equipo: [{ id, perfil, cargo, rol, justificacion, nombre }], sesiones: [{ id, fecha (AAAA-MM-DD), actividad, duracion, asistentes: [idMiembro], resultados }], fallos: [{ id, num, subprocesoId, fallo, efecto, causa, controles, g, o, d }], escalas: { g, o, d: [5 textos] }, notas, creado, modificado }`.
+- G, O y D se guardan como texto (lo escrito); el IPR, el puesto y la prioridad se calculan siempre. `num` es el número fijo del fallo (matriz, flujograma); el saneado renumera repetidos.
+- Regla de esquema `"ent"` = entero ≥ 0; `{ lista, keepEmpty: 5 }` = lista de longitud fija (escalas).
+- Enlaces en la UI: campos del AMFE con `data-k`; subprocesos `data-s` + `data-f`; equipo `data-m` + `data-f`; sesiones `data-x` + `data-f`; fallos `data-fa` + `data-f`; asistentes `data-asis` + `data-v`. Al escribir se refrescan zonas (`refrescar(idFallo)`: `[data-zona]`, `[data-zav]` avisos de cada fallo, `[data-zipr]`, `[data-zesc]`) sin perder el foco; los cambios de estructura (y los `<select>`) repintan conservando el scroll (`repintar`).
+- Borradores: un AMFE nuevo vive en `borradores` hasta que se escribe algo (`esVacio`).
+- Ejemplos: viven en memoria (`ejemplos()`, pasados por `sanearAmfe`; id `ej-amfe-urg`); la ruta decide `modoEjemplo`; `guardar()` solo escribe `datosUsuario`. «Copiar a mis datos» copia el AMFE con id nuevo. Nunca se importa un id `ej-`.
+- Copia de seguridad `.json` (en iOS, Compartir) y aviso en inicio si no hay copia o tiene más de 30 días. Importar: añadir (fusiona por id, gana el más reciente) o sustituir (doble confirmación).
+
+## 3. Decisiones del autor (2026-10-21)
+- Diseño aprobado, con las **mejoras A–K** (ver `Diseño/DISEÑO_AMFE.md`, sección 8).
+- Matriz **10 × 10 por defecto + vista 5 × 5**; zonas de color del Documento Final (`zonaMatriz`).
+- Votación G·O·D **opcional por miembro** (media + aviso si máx − mín ≥ 4).
+- **Ishikawa opcional por fallo** (entrega 5).
+- Acento **naranja ámbar**.
+- Prioridad por defecto: **los 15 de mayor IPR** (cambiable por N o umbral) + gravedad 9–10 siempre señalada + marca/desmarca manual con motivo.
+- **Fallo crítico** Sí/No con motivo obligatorio y aviso didáctico si se abusa.
+- Heredadas de Auditorías: en pantalla no se menciona el curso (solo en «Acerca de»); ejemplo real de Urgencias sin nombres de centro ni personas (equipo solo por perfiles) + minicasos inventados; trabajo en equipo con la copia `.json`; Word + PDF + Excel; lenguaje inclusivo neutro.
+- Sin respuesta expresa del autor, se han tomado por defecto: nombre visible «AMFE · Análisis Modal de Fallos y Efectos», repositorio `cjgaland/amfe`, «Ponte a prueba» con las 15 preguntas de los temas 2, 4 y 5 del test.
+
+## 4. Entorno y pruebas
+- Node v26 (Homebrew). `node tests/logic.test.mjs`.
+- Servir en local desde Bash en segundo plano: `cd "/Users/Trabajo/Desktop/AMFE/Aplicación" && python3 -m http.server 8768`, y abrir la vista previa `app-amfe` de `/Users/Trabajo/Desktop/AMFE/.claude/launch.json` (solo URL). El navegador integrado no admite service workers.
+- Revisar siempre en escritorio y en móvil (360 px): sin scroll horizontal (`document.documentElement.scrollWidth === 360`), y en modo oscuro.
+- Iconos: `icon-512.svg` (matriz de riesgos 5 × 5 con las zonas del curso) → PNG con `qlmanage -t -s 512 -o <carpeta> icon-512.svg` y tamaños con `sips -z`.
+
+## 5. Versiones
+- `APP_VERSION` y `NOVEDADES` al principio de `app.js` (formato AAAA.NN, la más reciente arriba). Claves de localStorage: `amfe-datos`, `amfe-tema`, `amfe-bienvenida-vista`, `amfe-version-vista`, `amfe-facil-abierto` (y, desde la entrega 2, `amfe-intercambio`).
+
+## 6. Copias de seguridad locales
+```
+Desktop/AMFE/
+├── Aplicación/   ← la app (este repositorio git, lo que se publica)
+├── Backup/       ← 5 copias más recientes, fuera del repositorio
+└── Diseño/       ← DISEÑO_AMFE.md
+```
+`bash ~/.claude/skills/app-copia_seguridad/scripts/copia_seguridad.sh --root "/Users/Trabajo/Desktop/AMFE" --name AMFE --exclude "Curso*" --exclude "Documentos*" --exclude "*.docx" --exclude .claude` (copia `Aplicación/` y `Diseño/`). Hacer una antes de cada publicación.
+
+## 7. Publicación
+Aún no publicada. Se publicará **solo cuando el autor lo pida**: repositorio público `cjgaland/amfe`, GitHub Pages desde `main` (raíz) → https://cjgaland.github.io/amfe/. Pasos por versión: copia de seguridad; entrada en `NOVEDADES` + `APP_VERSION`; mismos `?v=` en index.html; subir `CACHE_NAME` en sw.js; tests; commit en español terminado en `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`; push. Al publicar, enlazarla desde las apps hermanas (cada una en su propia sesión).
+
+## 8. Estado y pendiente (plan por entregas en el documento de diseño)
+- **Entrega 1 (hecha, 2026-10-21, v2026.01)**: esqueleto e identidad (acento ámbar, icono), datos y copias; pasos 1 (proceso y subprocesos), 2 (equipo y sesiones), 4 (fallos, efecto, causa, controles, avisos de redacción, pegar desde Excel) y 5 (G·O·D con la escala a la vista, IPR, avisos, orden por IPR y gráfico); tabla AMFE imprimible/PDF; ejemplo de Urgencias (49 fallos); Aprende (7 temas) y glosario; tests.
+- **Entrega 2**: paso 6 (top N / umbral, gravedad 9–10, fallo crítico, matriz 10 × 10 y 5 × 5, priorización por subprocesos), Excel (`xlsx.js`), paquete de intercambio `amfe-fallos` v1 en `amfe-intercambio` y en la copia.
+- **Entrega 3**: pasos 7 y 8 (5W1H, indicador y estándar con «Traer de Indicadores», fuerza de la medida, IPR residual, conclusiones, control documental), Informe AMFE y resumen en Word (`docx.js`) y PDF.
+- **Entrega 4**: paso 3 (lluvia de ideas, grupo nominal), votación por miembro, modo reunión, hoja de trabajo imprimible, ediciones y revisión periódica.
+- **Entrega 5**: Ishikawa, «Ponte a prueba», minicasos, pulido, enlaces a las hermanas.
