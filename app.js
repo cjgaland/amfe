@@ -14,8 +14,13 @@
   // ---------- Versión y novedades ----------
   // Al publicar cambios: añadir una entrada AL PRINCIPIO de NOVEDADES, poner su versión en los ?v= de index.html, en
   // APP_VERSION y subir CACHE_NAME en sw.js. Formato de versión: AAAA.NN.
-  const APP_VERSION = "2026.04";
+  const APP_VERSION = "2026.05";
   const NOVEDADES = [
+    { version: "2026.05", fecha: "Octubre 2026", titulo: "Ishikawa, Ponte a prueba y minicasos", cambios: [
+      "Diagrama de Ishikawa en cada fallo (paso 4), con las siete ramas de los ejercicios del curso, los «porqués» hasta la causa de fondo y un botón para llevar las causas elegidas a la columna «causa». La app dibuja la espina de pescado y el informe lo incluye como anexo.",
+      "«Ponte a prueba»: las 15 preguntas de los temas de herramientas y AMFE del test del curso, con su explicación, y dos ejercicios prácticos: «¿fallo, efecto o causa?» y «puntúa este fallo» comparando con el equipo del curso.",
+      "Seis minicasos para practicar un paso concreto: transfusión, administración de medicación, toma de constantes, alta hospitalaria, analítica urgente y preparación de quirófano.",
+      "Enlaces a las apps hermanas en la portada y pequeños retoques."] },
     { version: "2026.04", fecha: "Octubre 2026", titulo: "Trabajo en equipo: ideas, votaciones y reuniones", cambios: [
       "Nuevo paso 3, Encontrar los fallos: lluvia de ideas por subproceso con preguntas guía, agrupación en bloques, aviso de ideas repetidas y técnica de grupo nominal (3, 2 y 1 puntos o del 1 al 10) con el recuento y los comentarios del grupo.",
       "Las ideas elegidas pasan a fallos con un toque, una a una o todas las de un bloque.",
@@ -48,7 +53,7 @@
       "Puntuación de gravedad, ocurrencia y detección con la escala a la vista, IPR automático, orden por IPR y avisos de las trampas más habituales.",
       "Ejemplo completo del Servicio de Urgencias (49 fallos), Aprende (7 temas), glosario, tabla imprimible y copia de seguridad."] }
   ];
-  const ENTREGA = 4;   // pasos ya construidos (ver L.PASOS[].entrega)
+  const ENTREGA = 5;   // pasos ya construidos (ver L.PASOS[].entrega)
 
   // ---------- Utilidades ----------
   const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -217,11 +222,13 @@
         <div class="toolbar"><button class="btn" data-act="copia">⬇ Copia de seguridad</button><button class="btn" data-act="importar">⬆ Importar copia</button></div>
       </div>
       <div class="guide">
-        <a class="guide-card" href="#/ejemplos"><span class="guide-num">Ej</span><div><div class="guide-q">Ejemplo</div><div class="guide-a">El AMFE completo de la <b>atención en Urgencias</b>: 7 subprocesos, 10 perfiles y 49 fallos puntuados.</div></div><span class="guide-go">›</span></a>
+        <a class="guide-card" href="#/ejemplos"><span class="guide-num">Ej</span><div><div class="guide-q">Ejemplo</div><div class="guide-a">El AMFE completo de la <b>atención en Urgencias</b> (49 fallos, de la lluvia de ideas al informe) y <b>seis minicasos</b> para practicar.</div></div><span class="guide-go">›</span></a>
         <a class="guide-card" href="#/aprende"><span class="guide-num">?</span><div><div class="guide-q">Aprende</div><div class="guide-a">${C.TEMAS.length} temas <b>explicados fácil</b>: del qué es un AMFE a las acciones de mejora.</div></div><span class="guide-go">›</span></a>
+        <a class="guide-card" href="#/prueba"><span class="guide-num">✓</span><div><div class="guide-q">Ponte a prueba</div><div class="guide-a">${C.TEST.length} preguntas del test con su <b>explicación</b>, y ejercicios prácticos.</div></div><span class="guide-go">›</span></a>
         <a class="guide-card" href="#/glosario"><span class="guide-num">A–Z</span><div><div class="guide-q">Glosario</div><div class="guide-a">${C.GLOSARIO.length} términos <b>en lenguaje llano</b>, con buscador.</div></div><span class="guide-go">›</span></a>
         <a class="guide-card guide-card--hermana" href="${L.URL_AUD}" target="_blank" rel="noopener"><span class="guide-num">✓</span><div><div class="guide-q">Auditorías ↗</div><div class="guide-a">App hermana: <b>comprueba con una auditoría</b> si las medidas contra tus fallos prioritarios se aplican.</div></div><span class="guide-go">›</span></a>
         <a class="guide-card guide-card--hermana" href="${L.URL_IND}" target="_blank" rel="noopener"><span class="guide-num">%</span><div><div class="guide-q">Indicadores ↗</div><div class="guide-a">App hermana: <b>diseña los indicadores</b> con los que medirás tus acciones de mejora.</div></div><span class="guide-go">›</span></a>
+        <a class="guide-card guide-card--hermana" href="${L.URL_TM}" target="_blank" rel="noopener"><span class="guide-num">n</span><div><div class="guide-q">Tamaño Muestral ↗</div><div class="guide-a">App hermana: <b>cuántos casos revisar</b> para medir esos indicadores.</div></div><span class="guide-go">›</span></a>
       </div>
       ${revisionesHtml(d)}
       ${practica("<b>Protección de datos:</b> un AMFE analiza un proceso, no a pacientes concretos. No escribas nombres de pacientes ni números de historia clínica.")}`;
@@ -409,6 +416,8 @@
         ${campo(f, "efecto", "Efecto: ¿qué pasaría si ocurre?", { bind: bf(f, "efecto"), area: true, ph: "p. ej. Error de identidad, confusión en pruebas o medicación", help: "La consecuencia en el paciente, el proceso o el sistema. De aquí sale la gravedad." })}
         ${campo(f, "causa", "Causa: ¿por qué podría ocurrir?", { bind: bf(f, "causa"), area: true, ph: "p. ej. Rutina interrumpida, recursos saturados", help: "Factores humanos, técnicos, organizativos o del entorno. Las acciones de mejora atacarán la causa." })}
         ${campo(f, "controles", "Controles actuales: ¿qué existe hoy para evitarlo o detectarlo?", { bind: bf(f, "controles"), area: true, opt: true, ph: "p. ej. Protocolo de identificación; pulsera impresa en triaje", help: "Protocolos, dobles chequeos, alertas informáticas, listas de verificación… Son la base para puntuar la detección." })}
+        <button type="button" class="link-btn ish-btn no-print" data-act="ish-toggle" data-id="${f.id}">${ishAbiertos.has(f.id) ? "Cerrar el diagrama de Ishikawa ▴" : `Buscar causas con un diagrama de Ishikawa${f.ishikawa.length ? ` (${plural(f.ishikawa.filter(x => lleno(x.texto)).length, "causa", "causas")})` : ""} ▾`}</button>
+        ${ishAbiertos.has(f.id) ? ishHtml(f) : ""}
         <div class="rg-pie no-print"><button type="button" class="link-btn link-btn--peligro" data-act="fa-del" data-id="${f.id}">Quitar este fallo</button><button type="button" class="link-btn" data-act="fa-toggle" data-id="${f.id}">Cerrar ▴</button></div>
       </div>
     </div>`;
@@ -445,6 +454,45 @@
       <div data-zona="avisos">${avisosGenerales(a, 4)}</div>
       ${a.subprocesos.length ? a.subprocesos.map((s, i) => grupoFallos(a, s, i)).join("") + grupoFallos(a, null, 0)
         : `<div class="placeholder-box"><p>Aún no hay subprocesos. <a href="#/amfe/${a.id}/1">Defínelos en el paso 1</a> o pega tu tabla: los subprocesos se crean solos.</p></div>${grupoFallos(a, null, 0)}`}`;
+  }
+
+  // ---------- Diagrama de Ishikawa por fallo (mejora B) ----------
+  const ishAbiertos = new Set();
+  const buscaCausa = (a, id) => { for (const f of a.fallos) { const x = f.ishikawa.find(y => y.id === id); if (x) return { f, x }; } return null; };
+  // Espina de pescado: cabeza = el fallo; 4 espinas arriba y 3 abajo, con hasta 3 causas por espina (las elegidas, resaltadas)
+  function ishSvg(f) {
+    const W = 800, H = 380, Y = 190, cab = 630, R = Object.keys(L.RAMAS_ISHIKAWA);
+    const corta = (s, n) => { s = String(s || ""); return s.length > n ? s.slice(0, n - 1) + "…" : s; };
+    const lineas = (s, n, max) => { const w = String(s || "").split(/\s+/), r = [""]; w.forEach(p => { if ((r[r.length - 1] + " " + p).trim().length > n) r.push(p); else r[r.length - 1] = (r[r.length - 1] + " " + p).trim(); }); return r.slice(0, max).map((l, i, a) => i === max - 1 && r.length > max ? corta(l, n - 1) + "…" : l); };
+    const huesos = R.map((k, i) => { const arriba = i < 4, x = arriba ? 205 + i * 135 : 272 + (i - 4) * 135; return { k, x, arriba }; });
+    return `<svg class="ish-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Diagrama de Ishikawa del fallo ${f.num}">
+      <line class="ish-espina" x1="20" y1="${Y}" x2="${cab}" y2="${Y}"/><path class="ish-espina" d="M${cab - 14} ${Y - 8} L${cab} ${Y} L${cab - 14} ${Y + 8}" fill="none"/>
+      <rect class="ish-cab" x="${cab + 4}" y="${Y - 58}" width="${W - cab - 8}" height="116" rx="10"/>
+      ${lineas(f.fallo, 22, 6).map((l, i, a) => `<text class="ish-cab-t" x="${(cab + W) / 2}" y="${Y - (a.length - 1) * 8.5 + i * 17 + 4}" text-anchor="middle">${esc(l)}</text>`).join("")}
+      ${huesos.map(({ k, x, arriba }) => { const dy = arriba ? -1 : 1, x2 = x - 70, y2 = Y + dy * 150, cs = f.ishikawa.filter(c => c.cat === k && lleno(c.texto)).sort((p, q) => q.elegida - p.elegida).slice(0, 3); return `<g>
+        <line class="ish-hueso" x1="${x}" y1="${Y}" x2="${x2}" y2="${y2}"/>
+        <text class="ish-rama" x="${x2}" y="${y2 + dy * 14 + (arriba ? 0 : 6)}" text-anchor="middle">${esc(L.RAMAS_ISHIKAWA[k].corto)}</text>
+        ${cs.map((c, j) => { const t = 0.36 + j * 0.24, px = x - 70 * t, py = Y + dy * 150 * t; return `<line class="ish-rama-l" x1="${px - 6}" y1="${py}" x2="${px}" y2="${py}"/><text class="ish-causa${c.elegida ? " ish-causa--el" : ""}" x="${px - 8}" y="${py + 3.5}" text-anchor="end"><title>${esc(c.texto)}</title>${esc(corta(c.texto, 21))}</text>`; }).join("")}
+        ${f.ishikawa.filter(c => c.cat === k && lleno(c.texto)).length > 3 ? `<text class="ish-mas" x="${x2 + 8}" y="${y2 + dy * 2 + (arriba ? 14 : -6)}">+${f.ishikawa.filter(c => c.cat === k && lleno(c.texto)).length - 3}</text>` : ""}</g>`; }).join("")}
+    </svg>`;
+  }
+  function ishHtml(f) {
+    const ele = L.causasElegidas(f);
+    return `<div class="ish no-print">
+      <p class="field-sub">Para cada rama, ¿qué causas pueden llevar a este fallo? En cada causa, preguntad «¿por qué?» hasta llegar a la causa de fondo (normalmente basta con tres veces). No hace falta rellenar todas las ramas. Marcad las causas más importantes.</p>
+      <div class="chart-card ish-graf" data-zish="${f.id}">${ishSvg(f)}</div>
+      ${Object.keys(L.RAMAS_ISHIKAWA).map(k => { const cs = f.ishikawa.filter(c => c.cat === k); return `<div class="ish-rama-b">
+        <div class="ish-rama-cab"><b>${L.RAMAS_ISHIKAWA[k].nom}</b><span>${esc(L.RAMAS_ISHIKAWA[k].que)}</span></div>
+        ${cs.map(c => `<div class="ish-causa-f">
+          <div class="ish-causa-fila"><label class="ish-el" title="Causa importante: pasará a la columna «causa»"><input type="checkbox" data-act="ish-elegir" data-id="${c.id}"${c.elegida ? " checked" : ""} /><span class="sr">Elegida</span></label>
+            <input class="txt-in ish-in" data-ik="${c.id}" data-f="texto" value="${esc(c.texto)}" placeholder="Causa" autocomplete="off" />
+            <button type="button" class="icon-btn" data-act="ish-del" data-id="${c.id}" aria-label="Quitar la causa">✕</button></div>
+          <details class="ish-pq"${c.porques.some(lleno) ? " open" : ""}><summary>¿Por qué?${c.porques.some(lleno) ? ` (${c.porques.filter(lleno).length})` : ""}</summary>${[0, 1, 2].map(j => `<input class="txt-in ish-in ish-in--pq" data-ik="${c.id}" data-f="porques.${j}" value="${esc(c.porques[j])}" placeholder="${j + 1}.º ¿por qué?" autocomplete="off" />`).join("")}</details>
+        </div>`).join("")}
+        <button type="button" class="link-btn" data-act="ish-add" data-id="${f.id}" data-cat="${k}">+ Causa</button>
+      </div>`; }).join("")}
+      <div class="toolbar"><button class="btn btn--primary" data-act="ish-causa" data-id="${f.id}"${ele.length ? "" : " disabled"}>Llevar ${ele.length ? plural(ele.length, "la causa elegida", "las " + ele.length + " causas elegidas").replace(/^\d+ /, "") : "las causas elegidas"} a «causa»</button></div>
+    </div>`;
   }
 
   // ---------- Paso 5 · Puntuar G·O·D ----------
@@ -949,6 +997,7 @@
     };
     // La lista del paso 6 solo se repinta si se cambia el criterio (si se escribe un motivo dentro, se perdería el foco)
     if (!todo) { delete Z.lista6; delete Z.ranking; }
+    $$("[data-zish]").forEach(el => { const f = a.fallos.find(x => x.id === el.dataset.zish); if (f) el.innerHTML = ishSvg(f); });
     $$("[data-zmed]").forEach(el => { const f = a.fallos.find(x => x.id === el.dataset.zmed); if (f) el.innerHTML = mediaHtml(f); });
     $$("[data-zona]").forEach(el => { const f = Z[el.dataset.zona]; if (f) el.innerHTML = f(); });
     $$("[data-zav]").forEach(el => { el.innerHTML = avisosFallo(a, n, el.dataset.zav); });
@@ -981,8 +1030,61 @@
       <div class="card minuto pdca--${t.c}"><h2 class="sub-h">En un minuto</h2><ul>${t.minuto.map(x => `<li>${x}</li>`).join("")}</ul></div>
       ${t.secciones.map((s, i) => `<details class="facil"${i === 0 ? " open" : ""}><summary>${s.t}</summary><div class="facil-body">${s.h}</div></details>`).join("")}
       ${box("ejemplo", "Minicaso", t.minicaso)}
-      <div class="toolbar"><a class="btn btn--primary" href="${t.practica.href}">${t.practica.texto} →</a></div>
+      <div class="toolbar"><a class="btn" href="#/prueba/${PRUEBA_DE_TEMA[t.n]}">✓ Ponte a prueba</a><a class="btn btn--primary" href="${t.practica.href}">${t.practica.texto} →</a></div>
       <div class="wiz-nav no-print">${prev ? `<a class="btn" href="#/aprende/${prev.n}">← ${prev.titulo}</a>` : "<span></span>"}${next ? `<a class="btn" href="#/aprende/${next.n}">${next.titulo} →</a>` : "<span></span>"}</div>`;
+  }
+
+  // ---------- Ponte a prueba ----------
+  // Tema de Aprende → bloque del test del curso (2 = Herramientas, 4 = AMFE I, 5 = AMFE II)
+  const PRUEBA_DE_TEMA = { 1: 4, 2: 4, 3: 2, 4: 2, 5: 5, 6: 5, 7: 5 };
+  const respuestas = {}, respFec = {}, puntuaciones = {};
+  // Orden de las opciones barajado pero estable (para que la correcta no esté siempre en el mismo sitio)
+  const barajar = (n, semilla) => { const a = Array.from({ length: n }, (_, i) => i); let s = semilla * 9301 + 49297; for (let i = n - 1; i > 0; i--) { s = (s * 9301 + 49297) % 233280; const j = Math.floor(s / 233280 * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const pillsPrueba = actualP => `<div class="tema-pills prueba-pills no-print"><a href="#/prueba" class="pdca--P${!actualP ? " actual" : ""}" title="Todas las preguntas">T</a>${Object.keys(C.TEMAS_TEST).map(k => `<a href="#/prueba/${k}" class="pdca--P${String(actualP) === k ? " actual" : ""}" title="${esc(C.TEMAS_TEST[k].nom)}">${k}</a>`).join("")}<a href="#/prueba/practica" class="pdca--H${actualP === "practica" ? " actual" : ""}" title="Ejercicios prácticos">✎</a></div>`;
+  function renderPrueba(tema) {
+    if (tema === "practica") { renderPractica(); return; }
+    const Q = C.TEST.map((q, i) => Object.assign({ i }, q)).filter(q => !tema || q.t === tema);
+    view.innerHTML = `
+      <h1 class="page-title">Ponte a prueba</h1>
+      <p class="page-lead">${C.TEST.length} preguntas del test del curso sobre herramientas y AMFE${tema ? ` (aquí, las del bloque «${esc(C.TEMAS_TEST[tema].nom)}»)` : ""}. Toca la respuesta que creas correcta y lee la explicación. Y en ✎, dos ejercicios prácticos.</p>
+      ${pillsPrueba(tema)}
+      <div class="marcador" data-zona="marcador">${marcadorHtml(Q)}</div>
+      <div class="card">${Q.map(q => { const ord = barajar(q.o.length, q.i + 1), r = respuestas[q.i]; return `<div class="quiz-q" data-q="${q.i}">
+        <p><span class="badge">${esc(C.TEMAS_TEST[q.t].nom)}</span> <b>${esc(q.q)}</b></p>
+        ${ord.map(j => `<button class="quiz-o${r != null ? (j === q.ok ? " quiz-o--ok" : j === r ? " quiz-o--mal" : "") : ""}" data-act="quiz" data-q="${q.i}" data-o="${j}">${esc(q.o[j])}</button>`).join("")}
+        <p class="quiz-fb"${r == null ? " hidden" : ""}>${r != null ? `${r === q.ok ? "<b>¡Correcto!</b> " : "<b>No.</b> "}${esc(q.e)} <a href="#/aprende/${C.TEMAS_TEST[q.t].aprende}">Repasar en «Aprende»</a>` : ""}</p>
+      </div>`; }).join("")}</div>
+      <div class="toolbar no-print"><button class="btn" data-act="quiz-reset">Empezar de nuevo</button><a class="btn btn--primary" href="#/prueba/practica">Ejercicios prácticos →</a></div>`;
+  }
+  function marcadorHtml(Q) {
+    const hechas = Q.filter(q => q.i in respuestas), bien = hechas.filter(q => respuestas[q.i] === q.ok).length;
+    if (!hechas.length) return `<span class="field-sub">Aciertos: 0 de ${Q.length}</span>`;
+    const p = bien / hechas.length;
+    return `<span><b>${bien}</b> aciertos de ${hechas.length} respondidas (de ${Q.length})</span>${hechas.length === Q.length ? `<span class="sem-b sem-b--${p >= 0.8 ? "verde" : p >= 0.6 ? "ambar" : "rojo"}">${p >= 0.8 ? "¡Muy bien!" : p >= 0.6 ? "Bien: repasa los fallos" : "Repasa «Aprende»"}</span>` : ""}`;
+  }
+  const EXPLICA_FEC = { fallo: "Es un <b>modo de fallo</b>: lo que sale mal, un hecho concreto y observable.", efecto: "Es un <b>efecto</b>: lo que le pasaría al paciente o al proceso si el fallo ocurre.", causa: "Es una <b>causa</b>: por qué podría ocurrir el fallo." };
+  function renderPractica() {
+    const E = C.EJERCICIOS, bien = E.fec.filter((x, i) => respFec[i] === x.tipo).length, hechas = Object.keys(respFec).length;
+    view.innerHTML = `
+      <h1 class="page-title">Ponte a prueba · ejercicios</h1>
+      <p class="page-lead">Dos ejercicios con frases y puntuaciones del AMFE de Urgencias del curso.</p>
+      ${pillsPrueba("practica")}
+      <h2 class="sec-t">1. ¿Fallo, efecto o causa?</h2>
+      <p class="field-sub">El error más frecuente al empezar un AMFE es mezclar las tres columnas. ¿Dónde pondrías cada frase? ${hechas ? `<b>${bien} de ${hechas}</b> bien.` : ""}</p>
+      <div class="card">${E.fec.map((x, i) => { const r = respFec[i]; return `<div class="quiz-q fec-q">
+        <p><b>«${esc(x.texto)}»</b></p>
+        <div class="seg seg--wrap" role="group">${["fallo", "efecto", "causa"].map(k => `<button type="button" class="${r === k ? (k === x.tipo ? "fec-ok" : "fec-mal") : r && k === x.tipo ? "fec-ok" : ""}" data-act="fec" data-i="${i}" data-v="${k}">${{ fallo: "Modo de fallo", efecto: "Efecto", causa: "Causa" }[k]}</button>`).join("")}</div>
+        ${r ? `<p class="quiz-fb">${r === x.tipo ? "<b>¡Correcto!</b> " : "<b>No.</b> "}${EXPLICA_FEC[x.tipo]} En el AMFE del curso es la columna «${x.tipo}» del fallo nº ${x.num}.</p>` : ""}
+      </div>`; }).join("")}</div>
+      <h2 class="sec-t">2. Puntúa este fallo</h2>
+      <p class="field-sub">Puntúa de 1 a 10 la gravedad, la ocurrencia y la detección, y compara con lo que decidió el equipo del curso. No hay una única respuesta correcta: lo importante es saber justificarla.</p>
+      ${E.puntua.map(x => { const p = puntuaciones[x.num] || {}; const mi = L.ipr(p.g, p.o, p.d), cur = L.ipr(x.g, x.o, x.d); return `<div class="card punt-ej">
+        <p><b>Nº ${x.num} · ${esc(x.fallo)}</b></p><p class="field-sub">Efecto: ${esc(x.efecto)} · Causa: ${esc(x.causa)}</p>
+        <div class="punt-god">${["g", "o", "d"].map(k => `<label class="god-c"><span>${L.ESCALA_NOM[k]}</span><input class="txt-in" data-pe="${x.num}" data-f="${k}" value="${esc(p[k] || "")}" inputmode="numeric" maxlength="2" placeholder="1–10" /></label>`).join("")}
+          <div class="punt-ipr"><button type="button" class="btn btn--sm" data-act="pe-ver" data-id="${x.num}">Comparar</button></div></div>
+        ${p.ver ? `<div class="note">ℹ El equipo del curso: <b>G ${x.g} · O ${x.o} · D ${x.d}</b> (IPR ${cur}).${mi ? ` Tú: IPR ${mi}.` : " Completa tus tres puntuaciones para ver tu IPR."} ${mi ? (["g", "o", "d"].some(k => Math.abs(L.entero1a10(p[k]) - x[k]) >= 3) ? "En alguna escala hay 3 puntos o más de diferencia: ¿imaginabais el mismo fallo, el mismo daño, los mismos controles?" : "Muy parecido al equipo del curso.") : ""}</div>` : ""}
+      </div>`; }).join("")}
+      <div class="toolbar no-print"><button class="btn" data-act="practica-reset">Empezar de nuevo</button><a class="btn" href="#/prueba">← Preguntas del test</a></div>`;
   }
 
   // ---------- Ejemplos ----------
@@ -994,8 +1096,9 @@
       <p class="field-sub">El AMFE del proceso «Atención integral en el Servicio de Urgencias», desde que el paciente llega a admisión hasta la decisión sobre su destino. Siete subprocesos, un equipo de diez perfiles, tres sesiones de trabajo, 49 fallos con su efecto, su causa y su puntuación, y los 15 prioritarios en la matriz de riesgos. El fallo de mayor IPR: <i>omisión de constantes clave o mal registro en el triaje</i> (7 × 7 × 7 = 343).</p>
       <div class="ej-grid">${C.EJEMPLOS.fichas.map(f => `<a class="ej-card" href="${f.href}"><b>${esc(f.t)}</b><span>${esc(f.s)}</span></a>`).join("")}<a class="ej-card" href="#/amfe/ej-amfe-urg/1?informe=1"><b>Tabla AMFE</b><span>Todo en una vista imprimible</span></a></div>
       <h2 class="sec-t">Minicasos</h2>
-      <p class="placeholder-box">Próximamente: casos cortos (transfusión, administración de medicación, alta hospitalaria, quirófano…) para practicar cada paso.</p>
-      ${practica("Las cifras de los ejemplos son las del caso del curso. Adapta siempre los fallos y las puntuaciones a tu proceso y a tu unidad.")}`;
+      <p class="field-sub">AMFE cortos e inventados (tres subprocesos y cinco fallos) para practicar un paso concreto. Cada uno abre en el paso que trabaja.</p>
+      <div class="ej-grid ej-grid--mini">${C.EJEMPLOS.minicasos.map(f => `<a class="ej-card" href="${f.href}"><b>${esc(f.t)}</b><span>${esc(f.s)}</span></a>`).join("")}</div>
+      ${practica("Las cifras del ejemplo de Urgencias son las del caso del curso; las de los minicasos son inventadas. Adapta siempre los fallos y las puntuaciones a tu proceso y a tu unidad.")}`;
   }
 
   // ---------- Glosario ----------
@@ -1242,7 +1345,7 @@
   }
 
   // ---------- Enrutado ----------
-  const NAV = [["", "Inicio"], ["amfe", "Mis AMFE"], ["ejemplos", "Ejemplos"], ["aprende", "Aprende"], ["glosario", "Glosario"]];
+  const NAV = [["", "Inicio"], ["amfe", "Mis AMFE"], ["ejemplos", "Ejemplos"], ["aprende", "Aprende"], ["prueba", "Ponte a prueba"], ["glosario", "Glosario"]];
   function buildNav() { $("#calc-nav").innerHTML = NAV.map(([r, t]) => `<a href="#/${r}" data-r="${r}">${t}</a>`).join(""); }
   function noEncontrado(que, href, txt) { view.innerHTML = `<div class="error-box">No se encuentra ${que} en este dispositivo.</div><p><a href="${href}">${txt}</a></p>`; }
   let previo = null, docActual = "";
@@ -1275,6 +1378,7 @@
     else if (partes[0] === "ejemplos") renderEjemplos();
     else if (partes[0] === "aprende") renderAprende(parseInt(partes[1], 10) || 0);
     else if (partes[0] === "glosario") renderGlosario();
+    else if (partes[0] === "prueba") renderPrueba(partes[1] === "practica" ? "practica" : (C.TEMAS_TEST[partes[1]] ? Number(partes[1]) : 0));
     else { renderHome(); navR = ""; }
     if (modoEjemplo) navR = "ejemplos";
     if (informe) { $$("details").forEach(d => { d.open = true; }); if (esIOS()) prepararPDF(); }
@@ -1303,6 +1407,7 @@
       b.disabled = !p.filas.length; b.textContent = p.filas.length ? `Añadir ${plural(p.filas.length, "fallo", "fallos")}` : "Añadir los fallos";
       return;
     }
+    if (t.dataset.pe) { const p = puntuaciones[t.dataset.pe] || (puntuaciones[t.dataset.pe] = {}); p[t.dataset.f] = t.value.trim(); return; }
     if (!a) return;
     const f = t.dataset.f, esSel = t.tagName === "SELECT";
     if (t.dataset.s) { const s = buscaEn(a.subprocesos, t.dataset.s); if (!s) return; s[f] = t.value; tocado(a); refrescar(); return; }
@@ -1325,6 +1430,7 @@
       const fa = buscaEn(a.fallos, t.dataset.vf); if (!fa) return;
       L.ponerVotoGOD(fa, t.dataset.vm, f, t.value); tocado(a); refrescar(fa.id); return;
     }
+    if (t.dataset.ik) { const r = buscaCausa(a, t.dataset.ik); if (!r) return; setPath(r.x, f, t.value); tocado(a); refrescar(); return; }
     if (t.dataset.ac) { const r = buscaAccion(a, t.dataset.ac); if (!r) return; setPath(r.x, f, t.value); tocado(a); refrescar(); return; }
     if (t.dataset.fr) {
       const fa = buscaEn(a.fallos, t.dataset.fr); if (!fa) return;
@@ -1554,6 +1660,30 @@
     else if (act === "ch-del" && a) { a.control.historial.splice(Number(b.dataset.i), 1); tocado(a); repintar(); }
     else if (act === "doc-ver") irInforme(b.dataset.doc);
     else if (act === "doc-word" && a) descargarWord(a, b.dataset.doc);
+    // --- Ishikawa ---
+    else if (act === "ish-toggle" && a) { if (ishAbiertos.has(id)) ishAbiertos.delete(id); else ishAbiertos.add(id); abiertos.add(id); repintar(); }
+    else if (act === "ish-add" && a) {
+      const f = buscaEn(a.fallos, id); if (!f) return;
+      const x = L.nuevaCausaIsh(genId(), b.dataset.cat); f.ishikawa.push(x); tocado(a); repintar();
+      const el = $(`[data-ik="${x.id}"][data-f="texto"]`); if (el) el.focus();
+    }
+    else if (act === "ish-del" && a) { const r = buscaCausa(a, id); if (!r) return; r.f.ishikawa = r.f.ishikawa.filter(y => y.id !== id); tocado(a); repintar(); }
+    else if (act === "ish-elegir" && a) { const r = buscaCausa(a, id); if (!r) return; r.x.elegida = b.checked; tocado(a); repintar(); }
+    else if (act === "ish-causa" && a) {
+      const f = buscaEn(a.fallos, id); if (!f) return; const s = L.textoCausaIshikawa(f); if (!s) return;
+      const hacer = () => { f.causa = s; tocado(a); repintar(); toast("Causas copiadas a la columna «causa».", 2500); };
+      if (lleno(f.causa) && f.causa !== s) confirmar(`<p>La causa escrita («${esc(L.corto(f.causa, 80))}») se sustituirá por las causas elegidas en el diagrama.</p>`, "Sustituir", hacer, { peligro: false }); else hacer();
+    }
+    // --- Ponte a prueba ---
+    else if (act === "quiz") {
+      const qi = Number(b.dataset.q), q = C.TEST[qi]; if (!q || qi in respuestas) return;
+      respuestas[qi] = Number(b.dataset.o);
+      const y = window.scrollY; renderPrueba(rutaActual().split("/")[2] ? Number(rutaActual().split("/")[2]) || 0 : 0); window.scrollTo(0, y);
+    }
+    else if (act === "quiz-reset") { Object.keys(respuestas).forEach(k => delete respuestas[k]); renderPrueba(Number(rutaActual().split("/")[2]) || 0); }
+    else if (act === "fec") { const i = Number(b.dataset.i); if (!(i in respFec)) { respFec[i] = b.dataset.v; const y = window.scrollY; renderPractica(); window.scrollTo(0, y); } }
+    else if (act === "pe-ver") { const p = puntuaciones[id] || (puntuaciones[id] = {}); p.ver = true; const y = window.scrollY; renderPractica(); window.scrollTo(0, y); }
+    else if (act === "practica-reset") { Object.keys(respFec).forEach(k => delete respFec[k]); Object.keys(puntuaciones).forEach(k => delete puntuaciones[k]); renderPractica(); }
     // --- Paso 3 ---
     else if (act === "idea-sub") { subIdeas = id; $$(".chip-sub").forEach(x => x.classList.toggle("active", x.dataset.id === id)); const el = $("#idea-txt"); if (el) el.focus(); }
     else if (act === "idea-add" && a) anadirIdea(a);

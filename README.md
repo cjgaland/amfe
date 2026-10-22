@@ -2,12 +2,22 @@
 
 PWA estática (HTML/CSS/JS puro, sin dependencias ni CDN, funciona sin conexión) para hacer, paso a paso y aprendiendo mientras se hace, el **Análisis Modal de Fallos y Efectos (AMFE)** de cualquier proceso sanitario.
 
-Ocho pasos: el proceso y sus subprocesos; el equipo y las sesiones; encontrar los fallos; analizar cada fallo (efecto, causa y controles actuales); puntuar gravedad, ocurrencia y detección (IPR); priorizar con la matriz de riesgos; acciones de mejora (5W1H) y reevaluación. En la versión actual están disponibles los pasos 1, 2, 4 y 5.
+Ocho pasos:
 
-- Avisos didácticos de las trampas más habituales (un fallo escrito como causa o como efecto, la detección que va al revés…).
-- Pegar los fallos desde Excel, Calc o Word.
-- Tabla AMFE imprimible y en PDF.
-- **Aprende** (siete temas), **glosario** y un **ejemplo completo** (atención en el Servicio de Urgencias, 49 fallos).
+1. El proceso y sus subprocesos.
+2. El equipo y las sesiones.
+3. Encontrar los fallos: lluvia de ideas y técnica de grupo nominal.
+4. Analizar cada fallo: efecto, causa, controles actuales y diagrama de Ishikawa.
+5. Puntuar gravedad, ocurrencia y detección (IPR), también con votación del equipo.
+6. Priorizar: los de mayor IPR, los muy graves y los críticos, con la matriz de riesgos.
+7. Acciones de mejora (5W1H) con indicador y estándar.
+8. Reevaluar (IPR residual), conclusiones, control del documento y ediciones.
+
+- Avisos didácticos de las trampas más habituales (un fallo escrito como causa o como efecto, la detección que va al revés, las medidas débiles…).
+- Modo reunión para proyectar y hoja de trabajo para las sesiones presenciales; pegar desde Excel.
+- Informe AMFE y resumen para la Dirección en Word y PDF, y libro de Excel.
+- Paquete de intercambio «amfe-fallos» para que Mapa de Riesgos y Auditorías puedan traer los fallos.
+- **Aprende** (siete temas), **Ponte a prueba**, **glosario**, un **ejemplo completo** (atención en el Servicio de Urgencias, 49 fallos) y seis **minicasos**.
 
 Los datos se guardan solo en el dispositivo; para trabajar en equipo se comparte la copia de seguridad.
 

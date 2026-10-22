@@ -151,7 +151,7 @@
   function nuevoMiembro(id) { return { id, perfil: "", cargo: "", rol: "miembro", justificacion: "", nombre: "" }; }
   function nuevaSesion(id) { return { id, fecha: "", actividad: "", duracion: "", asistentes: [], resultados: "" }; }
   // manual: "" = lo decide el criterio; "si" / "no" = el equipo lo marca o lo desmarca a mano (con motivo)
-  function nuevoFallo(id, n = 0) { return { id, num: n, subprocesoId: "", fallo: "", efecto: "", causa: "", controles: "", g: "", o: "", d: "", critico: false, motivoCritico: "", manual: "", motivo: "", acciones: [], residual: nuevoResidual(), votos: [] }; }
+  function nuevoFallo(id, n = 0) { return { id, num: n, subprocesoId: "", fallo: "", efecto: "", causa: "", controles: "", g: "", o: "", d: "", critico: false, motivoCritico: "", manual: "", motivo: "", acciones: [], residual: nuevoResidual(), votos: [], ishikawa: [] }; }
   // Control del documento (como en el Documento Final): elaborado, revisado, aprobado e histórico de revisiones
   function nuevaPersona() { return { nombre: "", cargo: "" }; }
   function nuevoControl() { return { elaborado: [nuevaPersona()], revisado: [nuevaPersona()], aprobado: [nuevaPersona()], historial: [{ edicion: "00", fecha: "", cambio: "Documento inicial" }] }; }
@@ -259,6 +259,7 @@
     if (sinCa) A.push({ nivel: "nota", texto: `${sinCa === 1 ? "Un fallo no tiene" : sinCa + " fallos no tienen"} causa. Las acciones de mejora atacan la causa: sin ella, no sabréis qué cambiar.` });
     const sinCtl = conTexto.filter(f => !lleno(f.controles)).length;
     if (conTexto.length >= 3 && sinCtl > conTexto.length / 2) A.push({ nivel: "nota", texto: `${sinCtl} de ${conTexto.length} fallos no tienen controles actuales. Escribe lo que hoy ya existe para evitarlos o detectarlos (protocolos, dobles chequeos, alertas…): sin eso, la detección se puntúa a ciegas.` });
+    F.forEach(f => { if (causasElegidas(f).length && !lleno(f.causa)) A.push({ nivel: "nota", fallo: f.id, texto: `Nº ${f.num}: el Ishikawa tiene causas elegidas, pero la columna «causa» está vacía. Pásalas con el botón del diagrama.` }); });
     const vaciosSub = a.subprocesos.filter(s => lleno(s.nombre) && !F.some(f => f.subprocesoId === s.id));
     if (vaciosSub.length && F.length >= 3) A.push({ nivel: "nota", texto: `${vaciosSub.length === 1 ? "El subproceso «" + vaciosSub[0].nombre + "» no tiene" : "Los subprocesos " + vaciosSub.map(s => "«" + s.nombre + "»").join(", ") + " no tienen"} ningún fallo. ¿De verdad no puede salir nada mal ahí?` });
     return A.map(x => Object.assign({ paso: 4 }, x));
@@ -549,6 +550,25 @@
     return A.map(x => Object.assign({ paso: 3 }, x));
   }
 
+  // ---------- Diagrama de Ishikawa por fallo (mejora B) ----------
+  // Las siete ramas que usan los ejercicios del curso
+  const RAMAS_ISHIKAWA = {
+    personal: { corto: "Personal", nom: "Personal", que: "Formación, experiencia, cansancio, presión asistencial." },
+    procedimiento: { corto: "Procedimientos", nom: "Procedimiento y protocolos", que: "Protocolos que no existen, no se conocen o no se cumplen; pasos que faltan." },
+    entorno: { corto: "Entorno", nom: "Entorno", que: "Ruido, luz, espacio, interrupciones, condiciones del lugar." },
+    equipamiento: { corto: "Equipos y tecnología", nom: "Equipamiento y tecnología", que: "Aparatos, sistemas informáticos, material que falla o no ayuda." },
+    comunicacion: { corto: "Comunicación", nom: "Comunicación", que: "Información que no llega, se entiende mal o no se registra." },
+    paciente: { corto: "Paciente", nom: "Factores del paciente", que: "Estado clínico o cognitivo, idioma, falta de acompañante." },
+    organizacion: { corto: "Organización", nom: "Sistema y organización", que: "Cultura de seguridad, cargas de trabajo, circuitos, supervisión." }
+  };
+  function nuevaCausaIsh(id, cat = "personal") { return { id, cat, texto: "", porques: ["", "", ""], elegida: false }; }
+  // La causa de fondo de una rama: el último «¿por qué?» contestado (o la propia causa)
+  const causaRaiz = x => [...x.porques].reverse().find(lleno) || x.texto;
+  const causasElegidas = f => f.ishikawa.filter(x => x.elegida && lleno(x.texto));
+  // Para la columna «causa»: cada causa elegida con su causa de fondo, si se han contestado los porqués
+  const limpia = t => String(t).trim().replace(/[.;]$/, "");
+  function textoCausaIshikawa(f) { return causasElegidas(f).map(x => limpia(x.texto) + (causaRaiz(x) !== x.texto ? ` (de fondo: ${limpia(causaRaiz(x)).replace(/^./, m => m.toLowerCase())})` : "")).join("; "); }
+
   // ---------- Votación del equipo para G·O·D (mejora A) ----------
   // La media se redondea al entero (0,5 hacia arriba); si entre el voto más alto y el más bajo hay 4 puntos o más, hay que hablarlo
   function mediaVotos(f) {
@@ -802,6 +822,12 @@
       filas: F.map(f => [C_(f.num), nombreSub(a, f), { texto: f.fallo, negrita: true }, f.efecto, f.causa, f.controles, C_(f.g), C_(f.o), C_(f.d), celdaIpr(iprDe(f))]) });
     const O = ordenarFallos(F.filter(iprDe));
     if (O.length) B.push({ t: "h2", texto: "Ordenados por IPR" }, { t: "tabla", fuente: 7, cab: ["Puesto", "Nº", "Subproceso", "Modo de fallo", "G", "O", "D", "IPR", "Prioritario"], anchos: [7, 4, 20, 39, 4, 4, 4, 8, 10], filas: O.map(f => [C_(P[f.id]), C_(f.num), nombreSub(a, f), f.fallo, C_(f.g), C_(f.o), C_(f.d), celdaIpr(iprDe(f)), C_(m[f.id].prio ? "★" : "")]) });
+    const ISH = F.filter(f => f.ishikawa.some(x => lleno(x.texto)));
+    if (ISH.length) {
+      B.push({ t: "h1", texto: "Anexo III. Diagramas de Ishikawa" });
+      ISH.forEach(f => B.push({ t: "h2", texto: `Nº ${f.num}. ${f.fallo}` }, { t: "tabla", fuente: 8, cab: ["Rama", "Causa", "¿Por qué? (de la causa a la causa de fondo)", "Elegida"], anchos: [18, 30, 42, 10],
+        filas: Object.keys(RAMAS_ISHIKAWA).flatMap(k => f.ishikawa.filter(x => x.cat === k && lleno(x.texto)).map((x, i) => [i ? "" : { texto: RAMAS_ISHIKAWA[k].nom, negrita: true }, x.texto, x.porques.filter(lleno).join(" → "), { texto: x.elegida ? "✓" : "", centro: true }])) }));
+    }
     if (lleno(a.notas)) B.push({ t: "p", estilo: "nota", texto: a.notas });
     return { titulo: "AMFE · " + nom, bloques: B };
   }
@@ -921,7 +947,8 @@
     subproceso: { id: "id", nombre: [200], descripcion: [1000], inicio: [300], fin: [300], roles: [500], color: { en: Array.from({ length: COLORES_SUB }, (_, i) => String(i)) } },
     miembro: { id: "id", perfil: [200], cargo: [200], rol: { en: Object.keys(ROLES) }, justificacion: [1000], nombre: [200] },
     sesion: { id: "id", fecha: [20], actividad: [500], duracion: [40], asistentes: { lista: "ref", max: 40 }, resultados: [1500] },
-    fallo: { id: "id", num: "ent", subprocesoId: "ref", fallo: [1000], efecto: [1000], causa: [1000], controles: [1000], g: [3], o: [3], d: [3], critico: "b", motivoCritico: [1000], manual: { en: ["", "si", "no"] }, motivo: [1000], acciones: { de: "accion", max: 20 }, residual: { obj: "residual" }, votos: { de: "votoGOD", max: 40 } },
+    fallo: { id: "id", num: "ent", subprocesoId: "ref", fallo: [1000], efecto: [1000], causa: [1000], controles: [1000], g: [3], o: [3], d: [3], critico: "b", motivoCritico: [1000], manual: { en: ["", "si", "no"] }, motivo: [1000], acciones: { de: "accion", max: 20 }, residual: { obj: "residual" }, votos: { de: "votoGOD", max: 40 }, ishikawa: { de: "causaIsh", max: 80 } },
+    causaIsh: { id: "id", cat: { en: Object.keys(RAMAS_ISHIKAWA) }, texto: [500], porques: { lista: 500, keepEmpty: 3 }, elegida: "b" },
     votoGOD: { miembroId: "ref", g: [3], o: [3], d: [3] },
     idea: { id: "id", subprocesoId: "ref", texto: [500], bloqueId: "ref", falloId: "ref" },
     bloque: { id: "id", nombre: [200], comentario: [1000] },
@@ -938,7 +965,7 @@
     amfe: { id: "id", titulo: [200], proceso: [300], unidad: [200], objetivo: [2000], inicio: [300], fin: [300], incluye: [2000], excluye: [2000], responsable: [300], fecha: [40],
       subprocesos: { de: "subproceso", max: 40 }, equipo: { de: "miembro", max: 40 }, sesiones: { de: "sesion", max: 40 }, fallos: { de: "fallo", max: 500 }, escalas: { obj: "escalas" }, prioridad: { obj: "prioridad" }, introduccion: [4000], conclusiones: [5000], control: { obj: "control" }, proxRevision: [20], edicion: [4], anteriorId: "ref", ideas: { de: "idea", max: 500 }, bloques: { de: "bloque", max: 60 }, tgn: { obj: "tgn" }, notas: [3000], creado: [40], modificado: [40] }
   };
-  const FABRICA = { votoGOD: () => ({ miembroId: "", g: "", o: "", d: "" }), idea: id => nuevaIdea(id), bloque: id => nuevoBloque(id), votoTgn: () => ({ miembroId: "", bloqueId: "", puntos: "" }), tgn: nuevaTgn, escalas: nuevasEscalas, prioridad: nuevaPrioridad, indicador: nuevoIndicador, comprobacion: nuevaComprobacion, accion: nuevaAccion, residual: nuevoResidual, persona: nuevaPersona, revision: () => ({ edicion: "", fecha: "", cambio: "" }), control: () => ({ elaborado: [], revisado: [], aprobado: [], historial: [] }), subproceso: id => nuevoSubproceso(id), miembro: nuevoMiembro, sesion: nuevaSesion, fallo: id => nuevoFallo(id), amfe: id => nuevoAmfe(id, "") };
+  const FABRICA = { causaIsh: id => nuevaCausaIsh(id), votoGOD: () => ({ miembroId: "", g: "", o: "", d: "" }), idea: id => nuevaIdea(id), bloque: id => nuevoBloque(id), votoTgn: () => ({ miembroId: "", bloqueId: "", puntos: "" }), tgn: nuevaTgn, escalas: nuevasEscalas, prioridad: nuevaPrioridad, indicador: nuevoIndicador, comprobacion: nuevaComprobacion, accion: nuevaAccion, residual: nuevoResidual, persona: nuevaPersona, revision: () => ({ edicion: "", fecha: "", cambio: "" }), control: () => ({ elaborado: [], revisado: [], aprobado: [], historial: [] }), subproceso: id => nuevoSubproceso(id), miembro: nuevoMiembro, sesion: nuevaSesion, fallo: id => nuevoFallo(id), amfe: id => nuevoAmfe(id, "") };
   function sanear(esq, o, genId) {
     if (!o || typeof o !== "object" || Array.isArray(o)) return null;
     const S = ESQ[esq], r = FABRICA[esq](genId());
@@ -1000,6 +1027,7 @@
     fmtFecha, TIPOS_ACCION, CLASES_ACCION, ACTUA, COMPROBACION, ESTADOS_ACCION, cuentaEstado, FUERZAS, fuerzaMedida,
     nuevaAccion, nuevoIndicador, nuevoResidual, nuevaPersona, nuevoControl, iprResidual, vencida, accionCompleta, accionesDe, conAcciones, sugerirPorque, indicadoresDe,
     PREGUNTAS_GUIA, MODOS_TGN, nuevaIdea, nuevoBloque, duplicados, parecidas, ranking, voto321, ponerVoto321, voto1a10, ponerVoto1a10, ideaAFallo, avisosIdeas,
+    RAMAS_ISHIKAWA, nuevaCausaIsh, causaRaiz, causasElegidas, textoCausaIshikawa,
     mediaVotos, discrepancia, ponerVotoGOD, nuevaEdicion, compararEdiciones, revisionProxima, documentoHoja,
     avisosMejorar, avisosCerrar, resumenMejora, conclusionesSugeridas, introduccionSugerida, documentoInforme, documentoResumen,
     resumen, progreso, pasoPendiente, siguientePaso,

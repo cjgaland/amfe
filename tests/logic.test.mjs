@@ -260,7 +260,7 @@ eq("Indicadores: no es una copia de Indicadores", L.indicadoresDe({ amfes: [] })
 
 // Documentos
 const doc = L.documentoInforme(U, "21/10/2026"), h1 = doc.bloques.filter(b => b.t === "h1").map(b => b.texto);
-eq("Informe: apartados", h1, ["Control del documento", "1. Introducción", "2. Descripción del proceso", "3. Equipo y metodología", "4. Resultados del análisis", "5. Acciones de mejora", "6. Reevaluación del riesgo", "7. Conclusiones", "Anexo I. Escalas de puntuación", "Anexo II. Fallos analizados"]);
+eq("Informe: apartados", h1, ["Control del documento", "1. Introducción", "2. Descripción del proceso", "3. Equipo y metodología", "4. Resultados del análisis", "5. Acciones de mejora", "6. Reevaluación del riesgo", "7. Conclusiones", "Anexo I. Escalas de puntuación", "Anexo II. Fallos analizados", "Anexo III. Diagramas de Ishikawa"]);
 const tablas = doc.bloques.filter(b => b.t === "tabla");
 t("Informe: todas las tablas con filas del mismo ancho que la cabecera", tablas.every(b => !b.cab || b.filas.every(f => f.length === b.cab.length)));
 t("Informe: matriz 10 × 10", tablas.some(b => b.cab && b.cab[0] === "G \\ O" && b.filas.length === 10));
@@ -338,6 +338,38 @@ t("Hoja de un AMFE vacío", hv.bloques.some(b => b.t === "tabla" && b.filas.leng
 const S4 = L.sanearDatos({ amfes: [{ id: "q", equipo: [{ id: "m1", perfil: "X" }], bloques: [{ id: "b1", nombre: "B" }], subprocesos: [{ id: "s1", nombre: "S" }], ideas: [{ id: "i1", texto: "t", subprocesoId: "s1", bloqueId: "b9", falloId: "f9" }], tgn: { modo: "otro", votos: [{ miembroId: "m1", bloqueId: "b1", puntos: 3 }, { miembroId: "m9", bloqueId: "b1", puntos: 2 }] }, fallos: [{ id: "f1", num: 1, fallo: "x", votos: [{ miembroId: "m1", g: 5 }, { miembroId: "zz", g: 2 }] }] }] }, gid, "");
 const A4 = S4.amfes[0];
 eq("Saneado: ideas, votos y edición", [A4.ideas[0].bloqueId, A4.ideas[0].falloId, A4.tgn.modo, A4.tgn.votos.length, A4.tgn.votos[0].puntos, A4.fallos[0].votos.length, A4.edicion], ["", "", "321", 1, "3", 1, "00"]);
+
+// Entrega 5 · Ishikawa
+const f2u = U.fallos.find(f => f.num === 2);
+eq("Ishikawa del ejemplo: causas por rama", Object.keys(L.RAMAS_ISHIKAWA).map(k => f2u.ishikawa.filter(x => x.cat === k).length), [3, 2, 2, 2, 2, 2, 2]);
+eq("Ishikawa: causa de fondo = último porqué", L.causaRaiz(f2u.ishikawa[1]), "Plantilla ajustada en las horas punta");
+eq("Ishikawa: causas elegidas", L.textoCausaIshikawa(f2u), "Omisión del protocolo por rutina o fatiga (de fondo: plantilla ajustada en las horas punta); No hay un protocolo obligatorio de identificación al ingreso (de fondo: el protocolo del hospital no se ha adaptado a Urgencias); El sistema informático permite seguir sin confirmar los datos clave (de fondo: no tiene campos obligatorios en admisión)");
+const fk = L.nuevoFallo("fk", 1); fk.fallo = "x"; fk.ishikawa = [Object.assign(L.nuevaCausaIsh("k1", "entorno"), { texto: "Ruido", elegida: true })];
+const ak = L.nuevoAmfe("ak", ""); ak.fallos = [fk];
+t("Aviso: Ishikawa elegido y causa vacía", L.avisosFallos(ak).some(x => x.fallo === "fk" && /Ishikawa/.test(x.texto)));
+t("Informe: anexo III de Ishikawa", L.documentoInforme(U, "").bloques.some(b => b.t === "h1" && /Anexo III/.test(b.texto)));
+const SK = L.sanearAmfe({ id: "sk", fallos: [{ id: "f", num: 1, fallo: "x", ishikawa: [{ id: "k", cat: "rara", texto: "t", porques: ["a"], elegida: 1 }] }] }, gid, "");
+eq("Saneado: Ishikawa", [SK.fallos[0].ishikawa[0].cat, SK.fallos[0].ishikawa[0].porques, SK.fallos[0].ishikawa[0].elegida], ["personal", ["a", "", ""], false]);
+
+// Ponte a prueba y ejercicios
+eq("Test: 15 preguntas de los temas 2, 4 y 5", [C.TEST.length, [...new Set(C.TEST.map(q => q.t))]], [15, [2, 4, 5]]);
+t("Test: cada pregunta con 5 opciones, respuesta válida y justificación", C.TEST.every(q => q.o.length === 5 && q.ok >= 0 && q.ok < 5 && q.e.length > 20 && !/Pág\.|Curso:/.test(q.q + q.o.join("") + q.e)));
+eq("Ejercicio fallo-efecto-causa: 12 frases, 4 de cada", ["fallo", "efecto", "causa"].map(k => C.EJERCICIOS.fec.filter(x => x.tipo === k).length), [4, 4, 4]);
+t("Ejercicio: ninguna frase de «fallo» salta como causa o efecto", C.EJERCICIOS.fec.filter(x => x.tipo === "fallo").every(x => !L.tipoRedaccion(x.texto)));
+eq("Ejercicio puntúa: puntuaciones del curso", C.EJERCICIOS.puntua.map(x => L.ipr(x.g, x.o, x.d)), [343, 294, 36, 252]);
+
+// Minicasos
+const MC = C.EJEMPLOS.amfes.slice(1).map(x => L.sanearAmfe(JSON.parse(JSON.stringify(x)), gid, ""));
+eq("Minicasos: 6, con 5 fallos y 3 subprocesos", MC.map(m => [m.fallos.length, m.subprocesos.length]), Array(6).fill([5, 3]));
+t("Minicasos: ids de ejemplo", MC.every(m => /^ej-mini-/.test(m.id)) && C.EJEMPLOS.minicasos.length === 6);
+const mc = id => MC.find(m => m.id === id), avDe = (id, re) => L.avisos(mc(id), "2026-10-21").some(x => re.test(x.texto));
+eq("Minicaso medicación: el primero es el 504", L.iprDe(L.prioritarios(mc("ej-mini-med"))[0]), 504);
+t("Minicaso constantes: aviso de la detección al revés", avDe("ej-mini-const", /va al revés/));
+t("Minicaso alta: aviso de gravedad 10 no prioritario", avDe("ej-mini-alta", /gravedad 10 y no es prioritario/));
+t("Minicaso analítica: aviso de medidas débiles", avDe("ej-mini-anal", /medidas débiles/));
+t("Minicaso quirófano: aviso de fallo escrito como causa", avDe("ej-mini-quir", /parece una causa/));
+t("Minicaso transfusión: Ishikawa con causas elegidas", L.causasElegidas(mc("ej-mini-trans").fallos[1]).length === 3);
+t("Minicasos: Word del informe de cada uno", MC.every(m => D.construirDocx(L.documentoInforme(m, "")).length > 5000));
 
 console.log(`${ok} pruebas correctas, ${fallos} fallidas`);
 if (fallos) process.exit(1);

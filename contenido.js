@@ -71,7 +71,7 @@
           <tr><td><b>Causa</b></td><td>¿Por qué?</td><td>Rutina interrumpida, recursos saturados</td></tr></table></div>
           <div class="box box--trampa"><span class="box-tag">Ojo, trampa</span><p>El error más frecuente es escribir una <b>causa</b> como fallo («sobrecarga asistencial», «falta de formación») o un <b>efecto</b> como fallo («daño al paciente», «riesgo de caída»). La app avisa cuando lo detecta.</p></div>` },
         { t: "Diagrama de Ishikawa y los porqués", h: `<p>Para buscar causas, el <b>diagrama de espina de pescado</b> ordena las posibles causas en categorías: personas, métodos, equipos, materiales, entorno y organización. En cada una se pregunta «¿por qué?» hasta llegar a la causa de fondo (normalmente basta con tres veces). No hace falta encontrar causas en todas las categorías.</p>
-          <p>En la app, el Ishikawa por fallo llegará en una próxima versión.</p>` }
+          <p>En la app, cada fallo del paso 4 puede tener su diagrama de Ishikawa con las siete ramas de los ejercicios del curso (personal, procedimiento, entorno, equipamiento, comunicación, paciente y organización). Marca las causas de fondo y pásalas a la columna «causa» con un botón.</p>` }
       ],
       minicaso: `<p>«Falta de formación del personal de triaje» no es un modo de fallo: es una causa. ¿Qué sale mal por esa falta de formación? <b>Fallo</b>: <i>clasificación errónea del nivel de prioridad</i>. <b>Efecto</b>: <i>retraso en la atención y progresión del cuadro</i>. <b>Causa</b>: <i>subestimación de signos vitales alterados, falta de formación, presión asistencial</i>.</p>`,
       practica: { texto: "Analizar los fallos del ejemplo", href: "#/amfe/ej-amfe-urg/4" } },
@@ -160,6 +160,28 @@
     ["Estándar", "Valor del indicador que se considera aceptable (por ejemplo, ≥ 95 %)."],
     ["Mapa de Riesgos", "Representación de los riesgos de un proceso sobre su flujograma, con los fallos priorizados por el AMFE y sus acciones."],
     ["Análisis de causa raíz", "Método reactivo para investigar un incidente ya ocurrido y encontrar sus causas de fondo. El AMFE, en cambio, es proactivo."]
+  ];
+
+  // ---------- Ponte a prueba ----------
+  // Las 15 preguntas de los temas 2 (Herramientas), 4 (AMFE I) y 5 (AMFE II) del test de conocimientos del curso, con su justificación.
+  // t = tema del curso; ok = índice de la opción correcta (las opciones se barajan de forma estable al mostrarlas)
+  const TEMAS_TEST = { 2: { nom: "Herramientas", aprende: 3 }, 4: { nom: "AMFE I: el análisis", aprende: 4 }, 5: { nom: "AMFE II: priorizar y mejorar", aprende: 6 } };
+  const TEST = [
+    { t: 2, q: "¿Cuál de las siguientes se considera una herramienta básica para la mejora de procesos en Seguridad del Paciente?", o: ["Publicidad en redes sociales del hospital.", "Registro contable anual.", "Mapa de Procesos.", "Encuesta de clima laboral.", "Manual de bienvenida."], ok: 2, e: "El Mapa de Procesos es una herramienta básica para identificar, analizar y priorizar procesos críticos." },
+    { t: 2, q: "¿Qué herramienta permite identificar causas raíz de un problema asistencial?", o: ["Diagrama de Ishikawa (causa-efecto).", "Hoja de cálculo financiera.", "Calendario de turnos.", "Protocolos de alta hospitalaria.", "Registro de llamadas."], ok: 0, e: "El Diagrama de Ishikawa o espina de pescado ayuda a analizar causas principales y secundarias de un problema." },
+    { t: 2, q: "¿Cuál es el propósito principal del Diagrama de Pareto en calidad asistencial?", o: ["Dividir a los equipos de trabajo.", "Identificar el 80 % de problemas causados por el 20 % de causas clave.", "Validar la satisfacción del paciente.", "Clasificar medicamentos de alto riesgo.", "Planificar vacaciones."], ok: 1, e: "El principio de Pareto muestra que una parte reducida de causas suele generar la mayoría de los problemas." },
+    { t: 2, q: "¿Qué herramienta se usa para representar gráficamente un proceso paso a paso?", o: ["Histograma de frecuencias.", "Flujograma.", "Gráfico de barras.", "Checklist de enfermería.", "Diagrama de Gantt."], ok: 1, e: "El flujograma es ideal para representar procesos y facilitar su análisis y mejora." },
+    { t: 2, q: "¿Qué ventaja aporta la aplicación de herramientas de análisis en la gestión de riesgos asistenciales?", o: ["Elimina totalmente los riesgos.", "Minimiza la necesidad de formación.", "Permite tomar decisiones basadas en datos objetivos.", "Aumenta la carga burocrática sin beneficios.", "Sustituye la responsabilidad de los profesionales."], ok: 2, e: "Estas herramientas aportan datos que permiten priorizar y tomar decisiones informadas, no eliminan los riesgos al 100 %." },
+    { t: 4, q: "¿Qué significa AMFE en el ámbito de la gestión de riesgos sanitarios?", o: ["Análisis Múltiple de Fallos y Errores.", "Análisis Modal de Fallos y Efectos.", "Auditoría Médica de Fallos y Eventos.", "Asociación de Modos de Funcionamiento Eficiente.", "Análisis Metódico de Factores y Eventos."], ok: 1, e: "AMFE es la sigla de Análisis Modal de Fallos y Efectos, una herramienta estructurada para prevenir riesgos." },
+    { t: 4, q: "¿Cuál es el principal objetivo de aplicar un AMFE en un proceso sanitario?", o: ["Registrar incidencias informáticas.", "Incrementar la facturación anual.", "Identificar y priorizar posibles fallos antes de que ocurran.", "Sustituir las auditorías externas.", "Elaborar el presupuesto económico del servicio."], ok: 2, e: "El AMFE permite analizar anticipadamente los posibles fallos y priorizar medidas preventivas." },
+    { t: 4, q: "¿Qué elemento NO forma parte de la metodología básica de un AMFE?", o: ["Identificar los modos de fallo.", "Evaluar los efectos de cada fallo.", "Calcular la criticidad de cada riesgo.", "Asignar vacaciones a los equipos.", "Proponer acciones de mejora."], ok: 3, e: "Asignar vacaciones no forma parte de la metodología AMFE, que se centra en analizar riesgos y proponer mejoras." },
+    { t: 4, q: "¿Qué aspecto se evalúa habitualmente para calcular el índice de criticidad en un AMFE?", o: ["Tiempo de respuesta a reclamaciones.", "Grado de satisfacción de los visitantes.", "Severidad, ocurrencia y detección de cada fallo.", "Ingresos por acto quirúrgico.", "Desempeño financiero del hospital."], ok: 2, e: "Los tres factores clave son severidad, frecuencia (ocurrencia) y capacidad de detección del fallo." },
+    { t: 4, q: "¿Qué ventaja principal ofrece el uso del AMFE en procesos sanitarios?", o: ["Elimina por completo todos los riesgos.", "Identifica oportunidades de mejora preventiva y prioriza recursos.", "Garantiza la acreditación externa sin más requisitos.", "Sustituye la responsabilidad de los profesionales.", "Reduce la formación necesaria para el personal."], ok: 1, e: "El AMFE no elimina totalmente los riesgos, pero ayuda a identificarlos y priorizar acciones preventivas." },
+    { t: 5, q: "¿Qué significa el “Índice de Criticidad” en un AMFE?", o: ["El número de profesionales que realizan la auditoría.", "El coste económico de implantar una medida preventiva.", "El producto de severidad, ocurrencia y detección de un fallo.", "El tiempo dedicado a reuniones del equipo.", "El grado de satisfacción del paciente."], ok: 2, e: "El índice de criticidad se calcula multiplicando severidad × ocurrencia × detección para priorizar riesgos." },
+    { t: 5, q: "¿Qué valor indica mayor prioridad de actuación en un AMFE?", o: ["Un índice de criticidad bajo.", "Un índice de criticidad cercano a cero.", "Un índice de criticidad elevado.", "Cualquier índice da igual.", "El valor que indique la dirección."], ok: 2, e: "A mayor índice de criticidad, mayor prioridad para actuar sobre ese riesgo." },
+    { t: 5, q: "¿Qué papel tienen los equipos multidisciplinares en la aplicación del AMFE?", o: ["Ninguno, solo el jefe de servicio debe aplicarlo.", "Solo revisan los resultados finales.", "Son clave para aportar perspectivas distintas sobre el proceso y sus riesgos.", "Se encargan de elaborar los presupuestos.", "Notifican los fallos a Recursos Humanos."], ok: 2, e: "El AMFE se enriquece con la visión de distintos profesionales que conocen bien cada fase del proceso." },
+    { t: 5, q: "¿Qué acción debe seguirse tras calcular los índices de criticidad?", o: ["Clasificar los fallos por orden de prioridad y proponer acciones de mejora.", "Finalizar el proceso sin más pasos.", "Repetir la auditoría completa.", "Derivar todo el proceso a un auditor externo.", "Cancelar la implantación del AMFE."], ok: 0, e: "Tras priorizar los fallos, se proponen medidas preventivas o correctoras para reducir los riesgos más críticos." },
+    { t: 5, q: "¿Qué beneficio aporta realizar un AMFE de forma periódica?", o: ["Permite detectar nuevos riesgos y comprobar la eficacia de las acciones implantadas.", "Reduce la necesidad de formación del equipo.", "Disminuye la calidad asistencial.", "Elimina la obligación de notificar eventos adversos.", "Sustituye el Plan de Calidad de la unidad."], ok: 0, e: "Un AMFE periódico ayuda a actualizar riesgos y valorar si las mejoras aplicadas funcionan de forma real." }
   ];
 
   // ---------- Ejemplo completo: Urgencias (Documento Final del curso) ----------
@@ -306,6 +328,29 @@
   const VOTOS_URG = [[0, 0, 2], [0, 1, 3], [0, 2, 1], [1, 0, 3], [1, 1, 2], [1, 5, 1], [2, 0, 3], [2, 4, 2], [2, 2, 1], [3, 0, 3], [3, 10, 2], [3, 7, 1], [4, 2, 3], [4, 11, 2], [4, 1, 1]];
   // Votación individual de G·O·D en el fallo nº 10 (añadida para el ejemplo): media 7-7-7, con discrepancia en la detección
   const VOTOS_GOD_URG = { 10: [[0, 7, 7, 9], [1, 8, 7, 7], [2, 6, 8, 5], [3, 7, 6, 7], [4, 7, 7, 7]] };
+  // Diagrama de Ishikawa del fallo nº 2 (No identificación del paciente), con las causas del ejercicio 4a resuelto
+  // («Identificación del paciente»). Los «porqués» y las causas elegidas se han añadido para el ejemplo. [rama, causa, porqués, elegida]
+  const ISHIKAWA_URG = { 2: [
+    ["personal", "Presión asistencial que reduce el tiempo para hacer comprobaciones", [], false],
+    ["personal", "Omisión del protocolo por rutina o fatiga", ["Turnos largos con mucha presión", "Plantilla ajustada en las horas punta"], true],
+    ["personal", "Personal nuevo o en prácticas sin supervisión adecuada", [], false],
+    ["procedimiento", "No hay un protocolo obligatorio de identificación al ingreso", ["Cada turno lo hace a su manera", "El protocolo del hospital no se ha adaptado a Urgencias"], true],
+    ["procedimiento", "Falta de doble verificación antes de las pruebas diagnósticas", [], false],
+    ["entorno", "Zona de admisión con exceso de ruido que impide una comunicación clara", [], false],
+    ["entorno", "Iluminación deficiente para leer bien las pulseras o los documentos", [], false],
+    ["equipamiento", "Impresora de pulseras fuera de servicio o con errores frecuentes", [], false],
+    ["equipamiento", "El sistema informático permite seguir sin confirmar los datos clave", ["No tiene campos obligatorios en admisión"], true],
+    ["comunicacion", "No se verifican los datos de viva voz con el paciente", [], false],
+    ["comunicacion", "El error detectado (apellido incorrecto) no se comunica ni se corrige", [], false],
+    ["paciente", "Deterioro cognitivo que impide verificar sus propios datos", [], false],
+    ["paciente", "Sin acompañante habitual que conozca sus datos y antecedentes", [], false],
+    ["organizacion", "Falta de cultura institucional de seguridad en la identificación", [], false],
+    ["organizacion", "No hay indicadores ni auditorías sobre los errores de identificación", [], false]
+  ] };
+  // Ejercicio «¿Fallo, efecto o causa?»: frases del AMFE de Urgencias [nº de fallo, columna]
+  const EJERCICIO_FEC_URG = [[8, "fallo"], [10, "efecto"], [1, "causa"], [29, "fallo"], [23, "efecto"], [9, "causa"], [15, "fallo"], [36, "efecto"], [30, "causa"], [45, "fallo"], [5, "efecto"], [43, "causa"]];
+  // Ejercicio «Puntúa este fallo»: se compara con la puntuación del equipo del curso
+  const EJERCICIO_PUNTUA_URG = [10, 29, 6, 23];
   function amfeUrgencias() {
     const subs = SUBS_URG.map(([nombre, descripcion, inicio, fin, roles], i) => ({ id: "ej-urg-s" + (i + 1), nombre, descripcion, inicio, fin, roles, color: String(i) }));
     const equipo = EQUIPO_URG.map(([perfil, cargo, rol, justificacion], i) => ({ id: "ej-urg-m" + (i + 1), perfil, cargo, rol, justificacion, nombre: "" }));
@@ -327,7 +372,8 @@
         const r = RESIDUAL_URG[num];
         return { id: "ej-urg-f" + num, num, subprocesoId: subs[s].id, fallo, efecto, causa, controles: CONTROLES_URG[num] || "", g: String(g), o: String(o), d: String(d),
           acciones: acc, residual: r ? { g: String(r[0]), o: String(r[1]), d: String(r[2]), fecha: "", nota: "Esperado cuando la acción esté implantada" } : { g: "", o: "", d: "", fecha: "", nota: "" },
-          votos: (VOTOS_GOD_URG[num] || []).map(([m, g, o, d]) => ({ miembroId: equipo[m].id, g: String(g), o: String(o), d: String(d) })) };
+          votos: (VOTOS_GOD_URG[num] || []).map(([m, g, o, d]) => ({ miembroId: equipo[m].id, g: String(g), o: String(o), d: String(d) })),
+          ishikawa: (ISHIKAWA_URG[num] || []).map(([cat, texto, pq, elegida], i) => ({ id: `ej-urg-k${num}-${i + 1}`, cat, texto, porques: [0, 1, 2].map(j => pq[j] || ""), elegida })) };
       }),
       bloques: BLOQUES_URG.map(([nombre, comentario], i) => ({ id: "ej-urg-b" + (i + 1), nombre, comentario })),
       ideas: IDEAS_URG.map(([b, s, texto, f], i) => ({ id: "ej-urg-i" + (i + 1), subprocesoId: subs[s].id, texto, bloqueId: "ej-urg-b" + (b + 1), falloId: f ? "ej-urg-f" + f : "" })),
@@ -342,13 +388,95 @@
         historial: [{ edicion: "00", fecha: "2025-11-04", cambio: "Documento inicial" }]
       },
       proxRevision: "2026-11-04",
-      notas: "Ejemplo basado en el Documento Final del Mapa de Riesgos de Urgencias y en los ejercicios resueltos del curso. Se han añadido para el ejemplo los controles actuales de los 15 fallos de mayor IPR y, en las acciones, el indicador, el estándar, el estado, la fecha de fin y la puntuación esperada tras las acciones. Las acciones cubren los 9 fallos que trabajan los ejercicios; quedan 6 prioritarios sin acción para practicar. La lluvia de ideas y la votación del grupo nominal son las de los ejercicios 2 y 3 (votos asignados a cinco miembros del equipo); la votación de G·O·D del fallo nº 10 se ha añadido para el ejemplo.",
+      notas: "Ejemplo basado en el Documento Final del Mapa de Riesgos de Urgencias y en los ejercicios resueltos del curso. Se han añadido para el ejemplo los controles actuales de los 15 fallos de mayor IPR y, en las acciones, el indicador, el estándar, el estado, la fecha de fin y la puntuación esperada tras las acciones. Las acciones cubren los 9 fallos que trabajan los ejercicios; quedan 6 prioritarios sin acción para practicar. La lluvia de ideas y la votación del grupo nominal son las de los ejercicios 2 y 3 (votos asignados a cinco miembros del equipo); la votación de G·O·D del fallo nº 10 se ha añadido para el ejemplo. El Ishikawa del fallo nº 2 usa las causas del ejercicio 4a; sus «porqués» se han añadido para el ejemplo.",
       creado: "2025-11-04T12:00:00.000Z", modificado: "2025-11-04T12:00:00.000Z"
     };
   }
 
+  // ---------- Minicasos inventados: AMFE cortos para practicar un paso concreto ----------
+  // subs: [nombre, qué se hace, inicio, fin, roles] · equipo: [perfil, cargo, papel]
+  // fallos: [subproceso (índice), fallo, efecto, causa, controles, G, O, D] · acciones: { nº: [[qué, por qué, dónde, plazo, quién, cómo, tipo, clase, actúa sobre, indicador, estándar]] }
+  // ishikawa: { nº: [[rama, causa, porqués, elegida]] }
+  const MINICASOS = [
+    { id: "ej-mini-trans", titulo: "Transfusión de sangre", unidad: "Hospitalización médica", paso: 4, foco: "Fallo, efecto y causa, y un diagrama de Ishikawa completo (fallo nº 2).",
+      proceso: "Transfusión de concentrados de hematíes en planta", inicio: "La prescripción de la transfusión", fin: "El final de la transfusión y la vigilancia posterior",
+      subs: [["Prescripción y solicitud", "Indicación y petición a banco de sangre.", "Decisión médica de transfundir", "Petición enviada", "Médico, hematología"], ["Extracción de la muestra para pruebas cruzadas", "Identificación, extracción y etiquetado.", "Llegada de la petición a planta", "Muestra en el banco de sangre", "Enfermería, celador"], ["Administración", "Comprobación final, transfusión y vigilancia.", "Llegada de la bolsa a planta", "Fin de la vigilancia", "Enfermería, médico"]],
+      equipo: [["Hematólogo/a", "Responsable del banco de sangre", "coordinador"], ["Enfermero/a de hospitalización", "Referente de seguridad transfusional", "referente"], ["Técnico/a de laboratorio", "Banco de sangre", "experto"], ["Técnico/a de Calidad", "Unidad de Calidad", "secretario"]],
+      fallos: [[0, "Solicitud de transfusión sin indicación documentada", "Transfusión innecesaria con riesgo de reacción", "La petición no pide criterios de indicación", "Revisión por hematología de las peticiones", 6, 4, 4],
+        [1, "Muestra de pruebas cruzadas extraída a un paciente distinto", "Reacción hemolítica grave por incompatibilidad ABO", "No se identifica al paciente a pie de cama al extraer", "Etiquetado de los tubos en el control de enfermería", 10, 3, 7],
+        [1, "Tubo etiquetado lejos de la cabecera del paciente", "Confusión de muestras entre pacientes", "Etiquetas impresas por adelantado", "Ninguno", 9, 4, 6],
+        [2, "No se comprueba la compatibilidad de la bolsa con la pulsera antes de transfundir", "Transfusión de un componente incompatible", "La doble verificación no se exige en turnos con poco personal", "Protocolo de doble verificación", 10, 3, 6],
+        [2, "No se vigilan las constantes en los primeros 15 minutos", "Reacción transfusional no detectada a tiempo", "Interrupciones y carga de trabajo", "Hoja de registro de constantes", 8, 5, 5]],
+      ishikawa: { 2: [["personal", "Personal eventual que no conoce el protocolo", ["La acogida de los nuevos profesionales es muy breve", "No hay plan de acogida en seguridad transfusional"], true], ["procedimiento", "Los tubos se etiquetan fuera de la habitación", ["El protocolo no exige etiquetar a pie de cama", "El protocolo no se revisa desde hace años"], true], ["entorno", "Interrupciones durante la extracción", [], false], ["equipamiento", "No hay lector de pulseras en planta", ["No se ha incluido en el presupuesto"], true], ["comunicacion", "No se pide al paciente que diga su nombre", [], false], ["paciente", "Paciente desorientado o sedado", [], false], ["organizacion", "Muchas extracciones a la vez en el mismo turno", [], false]] } },
+    { id: "ej-mini-med", titulo: "Administración de medicación", unidad: "Medicina Interna", paso: 5, foco: "Puntuar G·O·D: el ejemplo del tema 5 (fármaco equivocado, 9 × 7 × 8 = 504).",
+      proceso: "Administración de medicación oral e intravenosa en planta", inicio: "La prescripción médica", fin: "El registro de la administración",
+      subs: [["Prescripción", "Indicación de fármaco, dosis, vía y horario.", "Valoración médica", "Prescripción firmada", "Médico"], ["Validación y dispensación", "Revisión farmacéutica y envío a planta.", "Prescripción recibida", "Medicación en el carro", "Farmacia"], ["Preparación y administración", "Preparación, comprobación y registro.", "Hora pautada", "Registro de la dosis", "Enfermería, TCAE"]],
+      equipo: [["Médico/a internista", "Facultativo/a de planta", "coordinador"], ["Farmacéutico/a", "Farmacia hospitalaria", "experto"], ["Enfermero/a", "Enfermería de planta", "referente"], ["TCAE", "Auxiliar de planta", "operativo"]],
+      fallos: [[2, "Administración de un fármaco equivocado por envases parecidos", "Daño grave por el fármaco incorrecto", "Envases similares guardados juntos en el carro", "Ninguno eficaz: no hay verificación", 9, 7, 8],
+        [0, "Prescripción con dosis o unidades ambiguas", "Sobredosis o infradosis", "Prescripción en texto libre", "Validación farmacéutica", 8, 5, 4],
+        [1, "No se revisan las alergias antes de dispensar", "Reacción alérgica", "Alergias no registradas en la historia", "Alerta de alergias en el programa de prescripción", 9, 3, 3],
+        [2, "Dosis administrada a una hora distinta de la pautada", "Pérdida de eficacia del tratamiento", "Sobrecarga en los pases de medicación", "Registro de administración", 4, 6, 4],
+        [2, "No se registra la administración", "Dosis duplicada por el turno siguiente", "Registro en papel al final del turno", "Ninguno", 7, 5, 7]] },
+    { id: "ej-mini-const", titulo: "Toma de constantes", unidad: "Hospitalización quirúrgica", paso: 5, foco: "La detección va al revés: el fallo nº 2 tiene D = 2 sin controles escritos y la app avisa.",
+      proceso: "Toma y registro de constantes vitales en hospitalización", inicio: "La hora pautada de toma de constantes", fin: "El aviso al médico si hay valores de alarma",
+      subs: [["Toma de constantes", "Medición de TA, FC, FR, SatO₂ y temperatura.", "Hora pautada", "Valores medidos", "TCAE, enfermería"], ["Registro", "Anotación en la historia clínica.", "Valores medidos", "Valores registrados", "Enfermería"], ["Aviso al médico", "Comunicación de valores de alarma.", "Valor fuera de rango", "Médico avisado", "Enfermería, médico"]],
+      equipo: [["Supervisor/a de enfermería", "Supervisión de planta", "coordinador"], ["Enfermero/a", "Enfermería de planta", "referente"], ["TCAE", "Auxiliar de planta", "operativo"], ["Técnico/a de Calidad", "Unidad de Calidad", "secretario"]],
+      fallos: [[0, "No se toman las constantes en el horario pautado", "Deterioro clínico no detectado", "Carga de trabajo en el turno de noche", "Hoja de constantes por paciente", 7, 5, 6],
+        [0, "Tensiómetro mal calibrado", "Valores falsos que llevan a decisiones erróneas", "No hay plan de mantenimiento de los aparatos", "", 6, 3, 2],
+        [1, "Constantes anotadas en papel y no en la historia", "El médico no ve los valores alterados", "Faltan ordenadores en el control", "Revisión del registro en el pase de planta", 6, 6, 5],
+        [2, "No se avisa al médico ante valores de alarma", "Retraso en la atención de un paciente que empeora", "No hay escala de alerta temprana", "Criterio de cada enfermera", 9, 4, 6],
+        [2, "Aviso al médico sin la información clave", "Valoración telefónica incompleta", "Comunicación no estructurada", "Ninguno", 6, 5, 5]] },
+    { id: "ej-mini-alta", titulo: "Alta hospitalaria", unidad: "Medicina Interna", paso: 6, foco: "Priorizar: con los 3 de mayor IPR, el fallo nº 4 (gravedad 10, IPR 80) queda fuera y la app lo señala.",
+      proceso: "Alta hospitalaria y continuidad de cuidados", inicio: "La decisión médica de alta", fin: "La salida del paciente y el aviso a Atención Primaria",
+      subs: [["Decisión e informe de alta", "Informe médico y de enfermería.", "Decisión de alta", "Informes firmados", "Médico, enfermería"], ["Conciliación y educación", "Revisión del tratamiento y explicación al paciente.", "Informe disponible", "Paciente informado", "Farmacia, enfermería"], ["Salida y continuidad", "Citas, transporte y aviso al centro de salud.", "Paciente informado", "Salida del hospital", "Administración, enfermería de enlace"]],
+      equipo: [["Médico/a internista", "Facultativo/a responsable", "coordinador"], ["Enfermero/a de enlace", "Gestión de casos", "referente"], ["Farmacéutico/a", "Farmacia hospitalaria", "experto"], ["Administrativo/a", "Admisión", "miembro"]],
+      prioridad: "3",
+      fallos: [[0, "Informe de alta entregado sin la medicación actualizada", "Errores de tratamiento en casa", "Informe redactado con prisa al final de la mañana", "Revisión del informe por el médico responsable", 7, 6, 6],
+        [1, "No se concilia la medicación al alta", "Duplicidades o interacciones", "No hay farmacéutico en planta por la tarde", "Ninguno", 7, 6, 5],
+        [1, "No se explica al paciente cómo tomar la medicación nueva", "Mala adherencia y reingreso", "Falta de tiempo y de material escrito", "Ninguno", 6, 6, 5],
+        [2, "Alta de un paciente anticoagulado sin control programado", "Hemorragia grave o trombosis", "No se cita el control antes de la salida", "Protocolo de anticoagulación", 10, 2, 4],
+        [2, "No se comunica el alta al centro de salud", "Pérdida de continuidad asistencial", "Comunicación solo con el informe en papel", "Informe de enfermería al alta", 5, 5, 6]] },
+    { id: "ej-mini-anal", titulo: "Analítica urgente", unidad: "Urgencias y laboratorio", paso: 7, foco: "Acciones de mejora: todas son de formación o recordatorios y la app avisa de que son medidas débiles.",
+      proceso: "Solicitud y resultado de una analítica urgente", inicio: "La petición médica", fin: "La comunicación del resultado al médico",
+      subs: [["Petición", "Solicitud en el programa.", "Decisión médica", "Petición registrada", "Médico"], ["Extracción y envío", "Extracción, etiquetado y traslado al laboratorio.", "Petición registrada", "Muestra en el laboratorio", "Enfermería, celador"], ["Resultado y comunicación", "Análisis, validación y aviso.", "Muestra recibida", "Resultado visto por el médico", "Laboratorio, médico"]],
+      equipo: [["Médico/a de Urgencias", "Facultativo/a de guardia", "coordinador"], ["Enfermero/a de Urgencias", "Enfermería de boxes", "referente"], ["Técnico/a de laboratorio", "Laboratorio de urgencias", "experto"], ["Celador/a", "Celador de guardia", "miembro"]],
+      prioridad: "3",
+      fallos: [[0, "Petición sin marcar como urgente", "Resultado tardío y retraso del diagnóstico", "El programa no destaca la prioridad", "Ninguno", 6, 6, 6],
+        [1, "Tubo de muestra equivocado", "Muestra rechazada y nueva extracción", "Tubos parecidos sin guía visual", "Rechazo en el laboratorio", 4, 5, 3],
+        [1, "La muestra tarda en llegar al laboratorio", "Retraso en el resultado", "Celador ocupado en otros traslados", "Ninguno", 5, 6, 5],
+        [2, "Valor crítico no comunicado al médico", "Retraso en tratar una situación grave", "No hay circuito de aviso de valores críticos", "Visualización en el programa", 9, 3, 7],
+        [0, "Analítica pedida a un paciente equivocado", "Decisiones con los resultados de otra persona", "Varios pacientes con nombres parecidos", "Identificación con pulsera", 9, 2, 5]],
+      acciones: { 1: [["Sesión de formación sobre cómo marcar las peticiones urgentes", "Para que los resultados urgentes lleguen a tiempo", "Urgencias", "1 mes", "Jefatura de Urgencias", "Sesión de una hora en cada turno", "correctora", "formacion", ["o"], "% de peticiones urgentes marcadas como urgentes", "≥ 95 %"]],
+        4: [["Recordar al personal del laboratorio que avise de los valores críticos", "Para que ningún valor crítico pase desapercibido", "Laboratorio", "Inmediato", "Responsable del laboratorio", "Correo informativo y cartel en el laboratorio", "correctora", "formacion", ["d"], "% de valores críticos comunicados en menos de 30 minutos", "100 %"]],
+        3: [["Charla de sensibilización a los celadores sobre la prioridad de las muestras", "Para reducir el tiempo de traslado de las muestras urgentes", "Urgencias", "1 mes", "Supervisión de celadores", "Charla de 30 minutos", "correctora", "formacion", ["o"], "Tiempo medio de traslado de muestras urgentes", "≤ 15 min"]] } },
+    { id: "ej-mini-quir", titulo: "Preparación de quirófano", unidad: "Bloque quirúrgico", paso: 4, foco: "Redacción: el fallo nº 2 está escrito como una causa («Sobrecarga del personal…») y la app avisa.",
+      proceso: "Preparación del quirófano y del paciente antes de la incisión", inicio: "La programación de la intervención", fin: "La verificación antes de la incisión",
+      subs: [["Programación", "Parte quirúrgico y documentación.", "Indicación quirúrgica", "Paciente programado", "Cirujano, admisión"], ["Preparación de la sala y el material", "Instrumental, material y equipos.", "Parte del día", "Sala preparada", "Enfermería de quirófano, TCAE"], ["Verificación antes de la incisión", "Lista de verificación quirúrgica.", "Paciente en quirófano", "Inicio de la intervención", "Equipo quirúrgico"]],
+      equipo: [["Cirujano/a", "Jefatura de sección", "coordinador"], ["Enfermero/a de quirófano", "Supervisión del bloque", "referente"], ["Anestesiólogo/a", "Anestesia", "experto"], ["Técnico/a de Calidad", "Unidad de Calidad", "secretario"]],
+      fallos: [[0, "Paciente programado sin el consentimiento firmado", "Suspensión de la intervención", "No se comprueba en la consulta preanestésica", "Revisión de la documentación el día antes", 5, 4, 3],
+        [1, "Sobrecarga del personal de quirófano", "Material incompleto en la sala", "Programación con poco margen entre intervenciones", "Ninguno", 6, 5, 5],
+        [1, "Instrumental no estéril por un fallo del ciclo de esterilización", "Infección del sitio quirúrgico", "No se revisa el indicador químico del paquete", "Control del ciclo en la central de esterilización", 9, 2, 5],
+        [2, "No se realiza la lista de verificación quirúrgica", "Cirugía en el lado o en el paciente equivocado", "Se considera un trámite cuando hay prisa", "Lista de verificación en papel", 10, 3, 6],
+        [2, "No se marca el sitio quirúrgico", "Intervención en el lado equivocado", "No está incluido en el protocolo de la unidad", "Ninguno", 10, 2, 7]] }
+  ];
+  function miniAmfe(m) {
+    const subs = m.subs.map(([nombre, descripcion, inicio, fin, roles], i) => ({ id: `${m.id}-s${i + 1}`, nombre, descripcion, inicio, fin, roles, color: String(i) }));
+    const equipo = m.equipo.map(([perfil, cargo, rol], i) => ({ id: `${m.id}-m${i + 1}`, perfil, cargo, rol, justificacion: "", nombre: "" }));
+    return { id: m.id, titulo: m.titulo, proceso: m.proceso, unidad: m.unidad, objetivo: "", inicio: m.inicio, fin: m.fin, incluye: "", excluye: "", responsable: "", fecha: "",
+      subprocesos: subs, equipo, sesiones: [], prioridad: { modo: "top", n: m.prioridad || "3", umbral: "200" },
+      fallos: m.fallos.map(([s, fallo, efecto, causa, controles, g, o, d], i) => { const num = i + 1; return { id: `${m.id}-f${num}`, num, subprocesoId: subs[s].id, fallo, efecto, causa, controles, g: String(g), o: String(o), d: String(d),
+        acciones: ((m.acciones || {})[num] || []).map(([que, porque, donde, plazo, quien, como, tipo, clase, actuaSobre, nombre, estandar], j) => ({ id: `${m.id}-a${num}-${j + 1}`, que, porque, donde, plazo, fin: "", quien, como, tipo, clase, actuaSobre, indicador: { nombre, formula: "", estandar, fuente: "" }, estado: "pendiente", nota: "" })),
+        ishikawa: ((m.ishikawa || {})[num] || []).map(([cat, texto, pq, elegida], j) => ({ id: `${m.id}-k${num}-${j + 1}`, cat, texto, porques: [0, 1, 2].map(k => pq[k] || ""), elegida })) }; }),
+      notas: "Minicaso inventado para practicar. " + m.foco, creado: "2026-10-21T12:00:00.000Z", modificado: "2026-10-21T12:00:00.000Z" };
+  }
+  const EJERCICIOS = {
+    fec: EJERCICIO_FEC_URG.map(([num, col]) => { const f = FALLOS_URG.find(x => x[0] === num); return { texto: f[{ fallo: 2, efecto: 3, causa: 4 }[col]], tipo: col, num }; }),
+    puntua: EJERCICIO_PUNTUA_URG.map(num => { const f = FALLOS_URG.find(x => x[0] === num); return { num, fallo: f[2], efecto: f[3], causa: f[4], g: f[5], o: f[6], d: f[7] }; })
+  };
+
   const EJEMPLOS = {
-    amfes: [amfeUrgencias()],
+    amfes: [amfeUrgencias(), ...MINICASOS.map(miniAmfe)],
+    minicasos: MINICASOS.map(m => ({ t: m.titulo, s: m.foco, href: `#/amfe/${m.id}/${m.paso}` })),
     fichas: [
       { t: "1 · El proceso", s: "7 subprocesos con su inicio, fin y roles", href: "#/amfe/ej-amfe-urg/1" },
       { t: "2 · El equipo", s: "10 perfiles y 3 sesiones de trabajo", href: "#/amfe/ej-amfe-urg/2" },
@@ -361,7 +489,7 @@
     ]
   };
 
-  const API = { TEMAS, GLOSARIO, EJEMPLOS };
+  const API = { TEMAS, GLOSARIO, EJEMPLOS, TEST, TEMAS_TEST, EJERCICIOS };
   if (typeof module !== "undefined" && module.exports) module.exports = API;
   else raiz.Contenido = API;
 })(typeof window !== "undefined" ? window : this);
