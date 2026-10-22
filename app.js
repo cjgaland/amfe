@@ -14,8 +14,10 @@
   // ---------- Versión y novedades ----------
   // Al publicar cambios: añadir una entrada AL PRINCIPIO de NOVEDADES, poner su versión en los ?v= de index.html, en
   // APP_VERSION y subir CACHE_NAME en sw.js. Formato de versión: AAAA.NN.
-  const APP_VERSION = "2026.05";
+  const APP_VERSION = "2026.06";
   const NOVEDADES = [
+    { version: "2026.06", fecha: "Octubre 2026", titulo: "Nuevas apps hermanas: Flujograma y DAFO · CAME", cambios: [
+      "Enlaces a las nuevas apps hermanas Flujograma (dibuja el flujograma del proceso; su botón «Traer de AMFE» usa tus subprocesos y fallos prioritarios) y DAFO · CAME (análisis DAFO de una unidad), en la portada y en «Acerca de»."] },
     { version: "2026.05", fecha: "Octubre 2026", titulo: "Ishikawa, Ponte a prueba y minicasos", cambios: [
       "Diagrama de Ishikawa en cada fallo (paso 4), con las siete ramas de los ejercicios del curso, los «porqués» hasta la causa de fondo y un botón para llevar las causas elegidas a la columna «causa». La app dibuja la espina de pescado y el informe lo incluye como anexo.",
       "«Ponte a prueba»: las 15 preguntas de los temas de herramientas y AMFE del test del curso, con su explicación, y dos ejercicios prácticos: «¿fallo, efecto o causa?» y «puntúa este fallo» comparando con el equipo del curso.",
@@ -229,6 +231,8 @@
         <a class="guide-card guide-card--hermana" href="${L.URL_AUD}" target="_blank" rel="noopener"><span class="guide-num">✓</span><div><div class="guide-q">Auditorías ↗</div><div class="guide-a">App hermana: <b>comprueba con una auditoría</b> si las medidas contra tus fallos prioritarios se aplican.</div></div><span class="guide-go">›</span></a>
         <a class="guide-card guide-card--hermana" href="${L.URL_IND}" target="_blank" rel="noopener"><span class="guide-num">%</span><div><div class="guide-q">Indicadores ↗</div><div class="guide-a">App hermana: <b>diseña los indicadores</b> con los que medirás tus acciones de mejora.</div></div><span class="guide-go">›</span></a>
         <a class="guide-card guide-card--hermana" href="${L.URL_TM}" target="_blank" rel="noopener"><span class="guide-num">n</span><div><div class="guide-q">Tamaño Muestral ↗</div><div class="guide-a">App hermana: <b>cuántos casos revisar</b> para medir esos indicadores.</div></div><span class="guide-go">›</span></a>
+        <a class="guide-card guide-card--hermana" href="${L.URL_FLUJO}" target="_blank" rel="noopener"><span class="guide-num">→</span><div><div class="guide-q">Flujograma ↗</div><div class="guide-a">App hermana: <b>dibuja el flujograma</b> del proceso y marca los puntos críticos; puede traer tus subprocesos y fallos prioritarios.</div></div><span class="guide-go">›</span></a>
+        <a class="guide-card guide-card--hermana" href="${L.URL_DAFO}" target="_blank" rel="noopener"><span class="guide-num">D</span><div><div class="guide-q">DAFO · CAME ↗</div><div class="guide-a">App hermana: <b>analiza tu unidad</b> con un DAFO para decidir qué proceso merece un AMFE.</div></div><span class="guide-go">›</span></a>
       </div>
       ${revisionesHtml(d)}
       ${practica("<b>Protección de datos:</b> un AMFE analiza un proceso, no a pacientes concretos. No escribas nombres de pacientes ni números de historia clínica.")}`;

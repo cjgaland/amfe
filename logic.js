@@ -16,6 +16,8 @@
   const URL_AUD = "https://cjgaland.github.io/auditorias/";
   const URL_IND = "https://cjgaland.github.io/indicadores-calidad/";
   const URL_TM = "https://cjgaland.github.io/tamano-muestral/";
+  const URL_FLUJO = "https://cjgaland.github.io/flujograma/";
+  const URL_DAFO = "https://cjgaland.github.io/dafo/";
 
   // ---------- Utilidades ----------
   const lleno = v => v != null && String(v).trim() !== "";
@@ -1014,7 +1016,7 @@
   }
 
   const API = {
-    VERSION_DATOS, URL_AUD, URL_IND, URL_TM,
+    VERSION_DATOS, URL_AUD, URL_IND, URL_TM, URL_FLUJO, URL_DAFO,
     lleno, sinTildes, num, entero1a10, corto, normal, plural,
     TRAMOS, ESCALAS_CURSO, ESCALA_NOM, ESCALA_PREG, tramo,
     ipr, iprDe, NIVELES_IPR, nivelIPR, ZONAS, zonaMatriz, ordenarFallos, puestos,
