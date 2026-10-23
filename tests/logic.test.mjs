@@ -374,14 +374,26 @@ t("Minicasos: Word del informe de cada uno", MC.every(m => D.construirDocx(L.doc
 // Contrato con la app Mapa de Riesgos (carga este logic.js como window.LogicaAmfe; ver su diseño, sección 6.2).
 // Si una de estas funciones se quita o cambia de significado, hay que comprobar Mapa de Riesgos y subir MOTOR.
 const CONTRATO_MAPA = {
-  constantes: ["ESCALAS_CURSO", "TRAMOS", "NIVELES_IPR"],
+  constantes: ["ESCALAS_CURSO", "TRAMOS", "NIVELES_IPR", "ESCALA_NOM", "ZONAS", "ROLES", "PERFILES_SUG", "SESIONES_TIPO", "TIPOS_ACCION", "CLASES_ACCION", "ACTUA", "ESTADOS_ACCION"],
   funciones: ["ipr", "iprDe", "nivelIPR", "zonaMatriz", "ordenarFallos", "puestos", "prioridad", "prioritarios", "sugerirMotivo", "matriz", "porSubproceso",
     "tipoRedaccion", "avisosEquipo", "avisosFallos", "avisosPuntuar", "avisosPriorizar", "avisosMejorar",
     "fuerzaMedida", "accionCompleta", "iprResidual", "resumenMejora",
     "nuevoFallo", "nuevaAccion", "nuevoMiembro", "nuevaSesion", "sanearAmfe",
-    "leerIntercambio", "paqueteIntercambio", "parsearTabla"]
+    "leerIntercambio", "paqueteIntercambio", "parsearTabla",
+    // Entrega 2 de Mapa de Riesgos (2026-10-23): el AMFE dentro del mapa
+    "tramo", "entero1a10", "nPrioridad", "resumen", "progreso", "estamentoDe", "nuevoAmfe", "siguienteNum", "incorporarFilas"]
 };
 eq("Contrato: MOTOR", L.MOTOR, 1);
+{ // Si la app Mapa de Riesgos está al lado (en el Escritorio), todo lo que usa (MOTORES.amfe.usa) tiene que estar en el contrato
+  const fs = require("node:fs"), url = require("node:url"), path = require("node:path");
+  const mr = path.join(path.dirname(url.fileURLToPath(import.meta.url)), "..", "..", "..", "Mapa de Riesgos", "Aplicación", "logic.js");
+  if (fs.existsSync(mr)) {
+    let usa = null; try { const M = require(mr); usa = M.MOTORES && M.MOTORES.amfe && M.MOTORES.amfe.usa; } catch (e) { /* */ }
+    const todo = [...CONTRATO_MAPA.constantes, ...CONTRATO_MAPA.funciones];
+    if (Array.isArray(usa)) eq("Contrato: lo que usa Mapa de Riesgos está en el contrato", usa.filter(k => !todo.includes(k)), []);
+    else t("Contrato: Mapa de Riesgos publica MOTORES.amfe.usa", false);
+  }
+}
 eq("Contrato: constantes que faltan", CONTRATO_MAPA.constantes.filter(k => L[k] === undefined), []);
 eq("Contrato: funciones que faltan", CONTRATO_MAPA.funciones.filter(k => typeof L[k] !== "function"), []);
 { // En el navegador se publica como window.Logica y también como window.LogicaAmfe

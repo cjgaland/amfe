@@ -42,6 +42,8 @@ Base copiada de `Auditorías/Aplicación` (mismos patrones). Archivos:
 - La superaplicación **Mapa de Riesgos** carga este mismo `logic.js` en vivo (`../amfe/logic.js` en GitHub Pages; en Node, `../../AMFE/Aplicación/logic.js`) y lo usa tal cual a través de **`window.LogicaAmfe`**. Por eso `logic.js` se publica como `window.Logica` (la propia app) **y** como `window.LogicaAmfe` (Flujograma también publica `window.Logica` y, cargados juntos, se pisarían).
 - **Regla: no quitar ni cambiar el significado** de las funciones del contrato (lista `CONTRATO_MAPA` en `tests/logic.test.mjs`, que copia la de `/Users/Trabajo/Desktop/Mapa de Riesgos/Diseño/DISEÑO_MAPA_RIESGOS.md`, sección 6.2) sin comprobar antes Mapa de Riesgos y **subir `MOTOR`** en `logic.js`. Añadir funciones o campos nuevos no rompe nada y no sube `MOTOR`.
 - `MOTOR = 1` hoy. Mapa de Riesgos lo comprueba al arrancar y, si no es compatible, avisa y no calcula.
+- Desde la entrega 2 de Mapa de Riesgos (2026-10-23) el contrato tiene 50 nombres (12 constantes y 38 funciones). Si la carpeta `Mapa de Riesgos/Aplicación` está al lado en el Escritorio, el test comprueba además que todo lo de su `MOTORES.amfe.usa` está en `CONTRATO_MAPA`.
+- Mapa de Riesgos pasa a `prioridad`, `avisos*`, `progreso`, `resumen` y `paqueteIntercambio` **su propio objeto mapa**: tiene todos los campos de un AMFE (equipo, sesiones, fallos, escalas, prioridad, ideas, bloques, tgn…) y además los de un flujograma. **No exigir campos nuevos obligatorios** en esas funciones sin avisar a Mapa de Riesgos: si se añade un campo, la función debe funcionar también cuando falte (valor por defecto).
 - Los tests de contrato pasan con `node tests/logic.test.mjs`.
 
 ## 3. Decisiones del autor (2026-10-21)
