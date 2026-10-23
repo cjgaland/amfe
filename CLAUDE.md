@@ -1,11 +1,11 @@
 # CLAUDE.md — AMFE
 
-> Documento común a todas las apps (lista, carpetas, identidad visual e intercambio de datos): `/Users/Trabajo/Desktop/Ecosistema Calidad/ECOSISTEMA.md`.
+> Documento común a todas las apps (lista, carpetas, identidad visual e intercambio de datos): `/Users/Trabajo/Desktop/Calidad&Seguridad/Ecosistema Calidad/ECOSISTEMA.md`.
 
-Guía de referencia para el desarrollo asistido por IA. Léela antes de proponer cambios. Responder siempre en español y en lenguaje claro (el autor no es programador). El diseño completo, las decisiones del autor y el plan por entregas están en `/Users/Trabajo/Desktop/AMFE/Diseño/DISEÑO_AMFE.md` (léelo también al empezar una sesión).
+Guía de referencia para el desarrollo asistido por IA. Léela antes de proponer cambios. Responder siempre en español y en lenguaje claro (el autor no es programador). El diseño completo, las decisiones del autor y el plan por entregas están en `/Users/Trabajo/Desktop/Calidad&Seguridad/Ecosistema Calidad/AMFE/Diseño/DISEÑO_AMFE.md` (léelo también al empezar una sesión).
 
 ## 1. Descripción
-PWA estática (sin build, sin dependencias, sin CDN) para hacer, **paso a paso y de forma didáctica**, el **Análisis Modal de Fallos y Efectos (AMFE)** de cualquier proceso sanitario: proceso y subprocesos, equipo y sesiones, fallos con efecto, causa y controles actuales, puntuación G·O·D e IPR, priorización, acciones de mejora y reevaluación. Nace del curso «Elaboración de Mapas de Riesgo en Procesos Sanitarios» (material en `/Users/Trabajo/Desktop/Mapa de Riesgos/Curso Mapa de Riesgo/`). Herramienta docente y de apoyo; no sustituye el criterio profesional.
+PWA estática (sin build, sin dependencias, sin CDN) para hacer, **paso a paso y de forma didáctica**, el **Análisis Modal de Fallos y Efectos (AMFE)** de cualquier proceso sanitario: proceso y subprocesos, equipo y sesiones, fallos con efecto, causa y controles actuales, puntuación G·O·D e IPR, priorización, acciones de mejora y reevaluación. Nace del curso «Elaboración de Mapas de Riesgo en Procesos Sanitarios» (material en `/Users/Trabajo/Desktop/Calidad&Seguridad/Ecosistema Calidad/Mapa de Riesgos/Curso Mapa de Riesgo/`). Herramienta docente y de apoyo; no sustituye el criterio profesional.
 
 Es una **herramienta** del ecosistema (funciona sola). La superaplicación **Mapa de Riesgos** y **Auditorías** podrán «Traer de AMFE» leyendo `localStorage["amfe-intercambio"]` (formato `amfe-fallos` v1, ver «Intercambio» más abajo). Hermana de Auditorías, Indicadores, Tamaño Muestral, Flujograma, DAFO · CAME y Mapa de Riesgos (enlazadas desde la portada y «Acerca de»; `L.URL_AUD`, `L.URL_IND`, `L.URL_TM`, `L.URL_FLUJO`, `L.URL_DAFO` desde v2026.06, `L.URL_MAPA` = https://cjgaland.github.io/mapa-riesgos/ desde v2026.07): mismos tokens CSS, modo claro/oscuro, modales, SW network-first con aviso «Actualizar», vista imprimible y PDF en iOS.
 
@@ -40,7 +40,7 @@ Base copiada de `Auditorías/Aplicación` (mismos patrones). Archivos:
 
 ## 2 bis. Motor compartido con Mapa de Riesgos (entrega 0 de Mapa de Riesgos, 2026-10-23)
 - La superaplicación **Mapa de Riesgos** carga este mismo `logic.js` en vivo (`../amfe/logic.js` en GitHub Pages; en Node, `../../AMFE/Aplicación/logic.js`) y lo usa tal cual a través de **`window.LogicaAmfe`**. Por eso `logic.js` se publica como `window.Logica` (la propia app) **y** como `window.LogicaAmfe` (Flujograma también publica `window.Logica` y, cargados juntos, se pisarían).
-- **Regla: no quitar ni cambiar el significado** de las funciones del contrato (lista `CONTRATO_MAPA` en `tests/logic.test.mjs`, que copia la de `/Users/Trabajo/Desktop/Mapa de Riesgos/Diseño/DISEÑO_MAPA_RIESGOS.md`, sección 6.2) sin comprobar antes Mapa de Riesgos y **subir `MOTOR`** en `logic.js`. Añadir funciones o campos nuevos no rompe nada y no sube `MOTOR`.
+- **Regla: no quitar ni cambiar el significado** de las funciones del contrato (lista `CONTRATO_MAPA` en `tests/logic.test.mjs`, que copia la de `/Users/Trabajo/Desktop/Calidad&Seguridad/Ecosistema Calidad/Mapa de Riesgos/Diseño/DISEÑO_MAPA_RIESGOS.md`, sección 6.2) sin comprobar antes Mapa de Riesgos y **subir `MOTOR`** en `logic.js`. Añadir funciones o campos nuevos no rompe nada y no sube `MOTOR`.
 - `MOTOR = 1` hoy. Mapa de Riesgos lo comprueba al arrancar y, si no es compatible, avisa y no calcula.
 - Desde la entrega 2 de Mapa de Riesgos (2026-10-23) el contrato tiene 50 nombres (12 constantes y 38 funciones). Si la carpeta `Mapa de Riesgos/Aplicación` está al lado en el Escritorio, el test comprueba además que todo lo de su `MOTORES.amfe.usa` está en `CONTRATO_MAPA`.
 - Mapa de Riesgos pasa a `prioridad`, `avisos*`, `progreso`, `resumen` y `paqueteIntercambio` **su propio objeto mapa**: tiene todos los campos de un AMFE (equipo, sesiones, fallos, escalas, prioridad, ideas, bloques, tgn…) y además los de un flujograma. **No exigir campos nuevos obligatorios** en esas funciones sin avisar a Mapa de Riesgos: si se añade un campo, la función debe funcionar también cuando falte (valor por defecto).
@@ -59,7 +59,7 @@ Base copiada de `Auditorías/Aplicación` (mismos patrones). Archivos:
 
 ## 4. Entorno y pruebas
 - Node v26 (Homebrew). `node tests/logic.test.mjs`.
-- Servir en local desde Bash en segundo plano: `cd "/Users/Trabajo/Desktop/AMFE/Aplicación" && python3 -m http.server 8768`, y abrir la vista previa `app-amfe` de `/Users/Trabajo/Desktop/AMFE/.claude/launch.json` (solo URL). El navegador integrado no admite service workers.
+- Servir en local desde Bash en segundo plano: `cd "/Users/Trabajo/Desktop/Calidad&Seguridad/Ecosistema Calidad/AMFE/Aplicación" && python3 -m http.server 8768`, y abrir la vista previa `app-amfe` de `/Users/Trabajo/Desktop/Calidad&Seguridad/Ecosistema Calidad/AMFE/.claude/launch.json` (solo URL). El navegador integrado no admite service workers.
 - Revisar siempre en escritorio y en móvil (360 px): sin scroll horizontal (`document.documentElement.scrollWidth === 360`), y en modo oscuro.
 - Iconos: `icon-512.svg` (matriz de riesgos 5 × 5 con las zonas del curso) → PNG con `qlmanage -t -s 512 -o <carpeta> icon-512.svg` y tamaños con `sips -z`.
 
@@ -68,12 +68,12 @@ Base copiada de `Auditorías/Aplicación` (mismos patrones). Archivos:
 
 ## 6. Copias de seguridad locales
 ```
-Desktop/AMFE/
+Desktop/Calidad&Seguridad/Ecosistema Calidad/AMFE/
 ├── Aplicación/   ← la app (este repositorio git, lo que se publica)
 ├── Backup/       ← 5 copias más recientes, fuera del repositorio
 └── Diseño/       ← DISEÑO_AMFE.md
 ```
-`bash ~/.claude/skills/app-copia_seguridad/scripts/copia_seguridad.sh --root "/Users/Trabajo/Desktop/AMFE" --name AMFE --exclude "Curso*" --exclude "Documentos*" --exclude "*.docx" --exclude .claude` (copia `Aplicación/` y `Diseño/`). Hacer una antes de cada publicación.
+`bash ~/.claude/skills/app-copia_seguridad/scripts/copia_seguridad.sh --root "/Users/Trabajo/Desktop/Calidad&Seguridad/Ecosistema Calidad/AMFE" --name AMFE --exclude "Curso*" --exclude "Documentos*" --exclude "*.docx" --exclude .claude` (copia `Aplicación/` y `Diseño/`). Hacer una antes de cada publicación.
 
 ## 7. Publicación
 Publicada el 2026-10-22 (v2026.05) con permiso del autor; v2026.06 (enlaces a Flujograma y DAFO · CAME, y motor compartido `window.LogicaAmfe` con `MOTOR = 1`) publicada el 2026-10-23: repositorio público `cjgaland/amfe`, GitHub Pages desde `main` (raíz) → https://cjgaland.github.io/amfe/. Cada nueva publicación (push) solo cuando el autor lo pida. Pasos por versión: copia de seguridad; entrada en `NOVEDADES` + `APP_VERSION`; mismos `?v=` en index.html; subir `CACHE_NAME` en sw.js; tests; commit en español terminado en `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`; push. Al publicar, enlazarla desde las apps hermanas (cada una en su propia sesión).
