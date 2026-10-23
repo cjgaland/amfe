@@ -21,6 +21,7 @@
   const URL_TM = "https://cjgaland.github.io/tamano-muestral/";
   const URL_FLUJO = "https://cjgaland.github.io/flujograma/";
   const URL_DAFO = "https://cjgaland.github.io/dafo/";
+  const URL_MAPA = "https://cjgaland.github.io/mapa-riesgos/";
 
   // ---------- Utilidades ----------
   const lleno = v => v != null && String(v).trim() !== "";
@@ -1019,7 +1020,7 @@
   }
 
   const API = {
-    VERSION_DATOS, MOTOR, URL_AUD, URL_IND, URL_TM, URL_FLUJO, URL_DAFO,
+    VERSION_DATOS, MOTOR, URL_AUD, URL_IND, URL_TM, URL_FLUJO, URL_DAFO, URL_MAPA,
     lleno, sinTildes, num, entero1a10, corto, normal, plural,
     TRAMOS, ESCALAS_CURSO, ESCALA_NOM, ESCALA_PREG, tramo,
     ipr, iprDe, NIVELES_IPR, nivelIPR, ZONAS, zonaMatriz, ordenarFallos, puestos,
