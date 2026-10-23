@@ -374,14 +374,16 @@ t("Minicasos: Word del informe de cada uno", MC.every(m => D.construirDocx(L.doc
 // Contrato con la app Mapa de Riesgos (carga este logic.js como window.LogicaAmfe; ver su diseño, sección 6.2).
 // Si una de estas funciones se quita o cambia de significado, hay que comprobar Mapa de Riesgos y subir MOTOR.
 const CONTRATO_MAPA = {
-  constantes: ["ESCALAS_CURSO", "TRAMOS", "NIVELES_IPR", "ESCALA_NOM", "ZONAS", "ROLES", "PERFILES_SUG", "SESIONES_TIPO", "TIPOS_ACCION", "CLASES_ACCION", "ACTUA", "ESTADOS_ACCION"],
+  constantes: ["ESCALAS_CURSO", "TRAMOS", "NIVELES_IPR", "ESCALA_NOM", "ZONAS", "ROLES", "PERFILES_SUG", "SESIONES_TIPO", "TIPOS_ACCION", "CLASES_ACCION", "ACTUA", "ESTADOS_ACCION", "FUERZAS", "COMPROBACION"],
   funciones: ["ipr", "iprDe", "nivelIPR", "zonaMatriz", "ordenarFallos", "puestos", "prioridad", "prioritarios", "sugerirMotivo", "matriz", "porSubproceso",
     "tipoRedaccion", "avisosEquipo", "avisosFallos", "avisosPuntuar", "avisosPriorizar", "avisosMejorar",
     "fuerzaMedida", "accionCompleta", "iprResidual", "resumenMejora",
     "nuevoFallo", "nuevaAccion", "nuevoMiembro", "nuevaSesion", "sanearAmfe",
     "leerIntercambio", "paqueteIntercambio", "parsearTabla",
     // Entrega 2 de Mapa de Riesgos (2026-10-23): el AMFE dentro del mapa
-    "tramo", "entero1a10", "nPrioridad", "resumen", "progreso", "estamentoDe", "nuevoAmfe", "siguienteNum", "incorporarFilas"]
+    "tramo", "entero1a10", "nPrioridad", "resumen", "progreso", "estamentoDe", "nuevoAmfe", "siguienteNum", "incorporarFilas",
+    // Entrega 3 de Mapa de Riesgos (2026-10-23): acciones de mejora y «Traer de Indicadores»
+    "accionesDe", "vencida", "cuentaEstado", "sugerirPorque", "indicadoresDe"]
 };
 eq("Contrato: MOTOR", L.MOTOR, 1);
 { // Si la app Mapa de Riesgos está al lado (en el Escritorio), todo lo que usa (MOTORES.amfe.usa) tiene que estar en el contrato
