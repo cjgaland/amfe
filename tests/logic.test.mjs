@@ -371,5 +371,28 @@ t("Minicaso quirófano: aviso de fallo escrito como causa", avDe("ej-mini-quir",
 t("Minicaso transfusión: Ishikawa con causas elegidas", L.causasElegidas(mc("ej-mini-trans").fallos[1]).length === 3);
 t("Minicasos: Word del informe de cada uno", MC.every(m => D.construirDocx(L.documentoInforme(m, "")).length > 5000));
 
+// Contrato con la app Mapa de Riesgos (carga este logic.js como window.LogicaAmfe; ver su diseño, sección 6.2).
+// Si una de estas funciones se quita o cambia de significado, hay que comprobar Mapa de Riesgos y subir MOTOR.
+const CONTRATO_MAPA = {
+  constantes: ["ESCALAS_CURSO", "TRAMOS", "NIVELES_IPR"],
+  funciones: ["ipr", "iprDe", "nivelIPR", "zonaMatriz", "ordenarFallos", "puestos", "prioridad", "prioritarios", "sugerirMotivo", "matriz", "porSubproceso",
+    "tipoRedaccion", "avisosEquipo", "avisosFallos", "avisosPuntuar", "avisosPriorizar", "avisosMejorar",
+    "fuerzaMedida", "accionCompleta", "iprResidual", "resumenMejora",
+    "nuevoFallo", "nuevaAccion", "nuevoMiembro", "nuevaSesion", "sanearAmfe",
+    "leerIntercambio", "paqueteIntercambio", "parsearTabla"]
+};
+eq("Contrato: MOTOR", L.MOTOR, 1);
+eq("Contrato: constantes que faltan", CONTRATO_MAPA.constantes.filter(k => L[k] === undefined), []);
+eq("Contrato: funciones que faltan", CONTRATO_MAPA.funciones.filter(k => typeof L[k] !== "function"), []);
+{ // En el navegador se publica como window.Logica y también como window.LogicaAmfe
+  const w = {}, fs = require("node:fs"), url = require("node:url"), path = require("node:path");
+  new Function("window", "module", fs.readFileSync(path.join(path.dirname(url.fileURLToPath(import.meta.url)), "..", "logic.js"), "utf8"))(w, undefined);
+  t("Contrato: window.LogicaAmfe en el navegador", w.LogicaAmfe && w.LogicaAmfe === w.Logica && w.LogicaAmfe.MOTOR === 1);
+}
+// Comportamiento básico que Mapa de Riesgos da por hecho
+eq("Contrato: firma de ipr, zonaMatriz y matriz", [L.ipr("7", 7, 7), L.zonaMatriz(10, 10), L.matriz([], 5).length, L.matriz([], 10)[0].length], [343, "rojo", 5, 10]);
+eq("Contrato: prioridad devuelve prio, auto, por, grave y zona", Object.keys(L.prioridad(U)[U.fallos[0].id]).sort(), ["auto", "grave", "por", "prio", "zona"]);
+eq("Contrato: formato de intercambio", [L.FORMATO_INTERCAMBIO, L.VERSION_INTERCAMBIO], ["amfe-fallos", 1]);
+
 console.log(`${ok} pruebas correctas, ${fallos} fallidas`);
 if (fallos) process.exit(1);

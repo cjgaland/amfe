@@ -38,6 +38,12 @@ Base copiada de `Auditorías/Aplicación` (mismos patrones). Archivos:
 - **Intercambio** (Diseño, 5.3): en cada guardado se escribe `localStorage["amfe-intercambio"]` = `L.paqueteIntercambio(datosUsuario.amfes, APP_VERSION, fecha)` = `{ formato: "amfe-fallos", version: 1, app, appVersion, generado, amfes: [{ id, titulo, proceso, unidad, fecha, edicion, escalas: "curso"|{g,o,d}, criterio: { modo, n, umbral }, subprocesos: [{ id, orden, nombre, inicio, fin, roles }], fallos: [{ id, num, subprocesoId, subproceso, fallo, efecto, causa, controles, g, o, d, ipr, puesto (números o null), prioritario, motivoPrioridad: top|umbral|critico|manual|null, motivo, critico, grave, zona, acciones: [], residual: null }] }] }`. También va en la copia `.json` (clave `intercambio`). Solo datos del usuario, nunca los ejemplos. **Añadir campos no sube la versión; quitar o cambiar el significado de uno sí.** Las otras apps validan con la misma lógica que `leerIntercambio`.
 - Copia de seguridad `.json` (en iOS, Compartir) y aviso en inicio si no hay copia o tiene más de 30 días. Importar: añadir (fusiona por id, gana el más reciente) o sustituir (doble confirmación).
 
+## 2 bis. Motor compartido con Mapa de Riesgos (entrega 0 de Mapa de Riesgos, 2026-10-23)
+- La superaplicación **Mapa de Riesgos** carga este mismo `logic.js` en vivo (`../amfe/logic.js` en GitHub Pages; en Node, `../../AMFE/Aplicación/logic.js`) y lo usa tal cual a través de **`window.LogicaAmfe`**. Por eso `logic.js` se publica como `window.Logica` (la propia app) **y** como `window.LogicaAmfe` (Flujograma también publica `window.Logica` y, cargados juntos, se pisarían).
+- **Regla: no quitar ni cambiar el significado** de las funciones del contrato (lista `CONTRATO_MAPA` en `tests/logic.test.mjs`, que copia la de `/Users/Trabajo/Desktop/Mapa de Riesgos/Diseño/DISEÑO_MAPA_RIESGOS.md`, sección 6.2) sin comprobar antes Mapa de Riesgos y **subir `MOTOR`** en `logic.js`. Añadir funciones o campos nuevos no rompe nada y no sube `MOTOR`.
+- `MOTOR = 1` hoy. Mapa de Riesgos lo comprueba al arrancar y, si no es compatible, avisa y no calcula.
+- Los tests de contrato pasan con `node tests/logic.test.mjs`.
+
 ## 3. Decisiones del autor (2026-10-21)
 - Diseño aprobado, con las **mejoras A–K** (ver `Diseño/DISEÑO_AMFE.md`, sección 8).
 - Matriz **10 × 10 por defecto + vista 5 × 5**; zonas de color del Documento Final (`zonaMatriz`).

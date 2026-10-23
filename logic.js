@@ -13,6 +13,9 @@
   "use strict";
 
   const VERSION_DATOS = 1;
+  // Versión del «motor» que usa la app Mapa de Riesgos (carga este logic.js como window.LogicaAmfe).
+  // Subirla SOLO si se quita o cambia el significado de una función del contrato (tests/logic.test.mjs, «Contrato»).
+  const MOTOR = 1;
   const URL_AUD = "https://cjgaland.github.io/auditorias/";
   const URL_IND = "https://cjgaland.github.io/indicadores-calidad/";
   const URL_TM = "https://cjgaland.github.io/tamano-muestral/";
@@ -1016,7 +1019,7 @@
   }
 
   const API = {
-    VERSION_DATOS, URL_AUD, URL_IND, URL_TM, URL_FLUJO, URL_DAFO,
+    VERSION_DATOS, MOTOR, URL_AUD, URL_IND, URL_TM, URL_FLUJO, URL_DAFO,
     lleno, sinTildes, num, entero1a10, corto, normal, plural,
     TRAMOS, ESCALAS_CURSO, ESCALA_NOM, ESCALA_PREG, tramo,
     ipr, iprDe, NIVELES_IPR, nivelIPR, ZONAS, zonaMatriz, ordenarFallos, puestos,
@@ -1037,5 +1040,6 @@
     ESQ, sanear, sanearAmfe, sanearDatos, fusionar
   };
   if (typeof module !== "undefined" && module.exports) module.exports = API;
-  else raiz.Logica = API;
+  // window.Logica para la propia app; window.LogicaAmfe para Mapa de Riesgos (Flujograma también publica window.Logica)
+  else { raiz.Logica = API; raiz.LogicaAmfe = API; }
 })(typeof window !== "undefined" ? window : this);
