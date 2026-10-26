@@ -16,6 +16,7 @@
   // APP_VERSION y subir CACHE_NAME en sw.js. Formato de versión: AAAA.NN.
   const APP_VERSION = "2026.13";
   const NOVEDADES = [
+    // [eco]
     { version: "2026.13", fecha: "Octubre 2026", titulo: "Traer de Lectura Crítica", cambios: [
       "En cada acción de mejora, «Traer de Lectura Crítica» añade al «Por qué» la evidencia de un artículo que hayas leído con la app Lectura Crítica: la referencia, el resultado principal, el mensaje y la decisión. Avisa si la decisión fue esperar o descartar."] },
     { version: "2026.12", fecha: "Octubre 2026", titulo: "Nueva app hermana: Lectura Crítica", cambios: [
@@ -33,11 +34,16 @@
       "Enlace a la nueva app hermana Mapa de Riesgos en la portada y en «Acerca de»: une tu AMFE con el flujograma del proceso y pinta los riesgos sobre él, coloreados por su IPR, con el documento final."] },
     { version: "2026.06", fecha: "Octubre 2026", titulo: "Nuevas apps hermanas: Flujograma y DAFO · CAME", cambios: [
       "Enlaces a las nuevas apps hermanas Flujograma (dibuja el flujograma del proceso; su botón «Traer de AMFE» usa tus subprocesos y fallos prioritarios) y DAFO · CAME (análisis DAFO de una unidad), en la portada y en «Acerca de»."] },
+    // [/eco]
+    /* [ind]
+    { version: "2026.13", fecha: "Octubre 2026", titulo: "Evidencia de Lectura Crítica", cambios: [
+      "En cada acción de mejora, «Cargar archivo de Lectura Crítica» añade al «Por qué» la evidencia de un artículo leído con la app Lectura Crítica (desde su copia de seguridad .json): la referencia, el resultado principal, el mensaje y la decisión. Avisa si la decisión fue esperar o descartar."] },
+    [/ind] */
     { version: "2026.05", fecha: "Octubre 2026", titulo: "Ishikawa, Ponte a prueba y minicasos", cambios: [
       "Diagrama de Ishikawa en cada fallo (paso 4), con las siete ramas de los ejercicios del curso, los «porqués» hasta la causa de fondo y un botón para llevar las causas elegidas a la columna «causa». La app dibuja la espina de pescado y el informe lo incluye como anexo.",
       "«Ponte a prueba»: las 15 preguntas de los temas de herramientas y AMFE del test del curso, con su explicación, y dos ejercicios prácticos: «¿fallo, efecto o causa?» y «puntúa este fallo» comparando con el equipo del curso.",
       "Seis minicasos para practicar un paso concreto: transfusión, administración de medicación, toma de constantes, alta hospitalaria, analítica urgente y preparación de quirófano.",
-      "Enlaces a las apps hermanas en la portada y pequeños retoques."] },
+      /*[eco]*/"Enlaces a las apps hermanas en la portada y pequeños retoques."/*[/eco]*/] },
     { version: "2026.04", fecha: "Octubre 2026", titulo: "Trabajo en equipo: ideas, votaciones y reuniones", cambios: [
       "Nuevo paso 3, Encontrar los fallos: lluvia de ideas por subproceso con preguntas guía, agrupación en bloques, aviso de ideas repetidas y técnica de grupo nominal (3, 2 y 1 puntos o del 1 al 10) con el recuento y los comentarios del grupo.",
       "Las ideas elegidas pasan a fallos con un toque, una a una o todas las de un bloque.",
@@ -49,7 +55,12 @@
     { version: "2026.03", fecha: "Octubre 2026", titulo: "Acciones de mejora, reevaluación e informe AMFE", cambios: [
       "Nuevo paso 7, Acciones de mejora: para cada fallo prioritario, una o varias acciones con qué, por qué, dónde, cuándo, quién y cómo (5W1H), su tipo, sobre qué actúa, su indicador y su estándar, y su estado.",
       "La app distingue las medidas fuertes, intermedias y débiles, avisa si todas son de formación o recordatorios y de los plazos vencidos, y propone el «por qué» a partir del efecto del fallo.",
+      // [eco]
       "«Traer de Indicadores»: usa un indicador que ya tengas en la app Indicadores, en este navegador o desde su copia de seguridad.",
+      // [/eco]
+      /* [ind]
+      "«Cargar archivo de Indicadores»: usa un indicador de la copia de seguridad (.json) de la app Indicadores.",
+      [/ind] */
       "Nuevo paso 8, Reevaluar y cerrar: la puntuación esperada tras las acciones (IPR residual), cuánto baja el riesgo, las conclusiones (con texto propuesto), la fecha de la próxima revisión y el control del documento.",
       "Informe AMFE completo y resumen para la Dirección, en Word editable y en PDF, con el mismo orden que el Documento Final del curso.",
       "El Excel incluye las acciones y la reevaluación, y el ejemplo de Urgencias trae las acciones de los ejercicios del curso."] },
@@ -60,7 +71,7 @@
       "Priorización por subprocesos: dónde se concentran los riesgos.",
       "Exportar a Excel: tabla AMFE completa, prioritarios, matriz, subprocesos, equipo y sesiones, y escalas.",
       "La tabla imprimible y el PDF incluyen los prioritarios, la matriz y la priorización por subprocesos.",
-      "Las apps Mapa de Riesgos y Auditorías podrán traer los fallos de este AMFE en el mismo navegador (próximamente en ellas)."] },
+      /*[eco]*/"Las apps Mapa de Riesgos y Auditorías podrán traer los fallos de este AMFE en el mismo navegador (próximamente en ellas)."/*[/eco]*/] },
     { version: "2026.01", fecha: "Octubre 2026", titulo: "Primera versión: describir, analizar y puntuar", cambios: [
       "Asistente en 8 pasos con «Tu siguiente paso» en la portada. En esta versión están disponibles los pasos 1, 2, 4 y 5.",
       "El proceso y sus subprocesos, con su inicio, su fin y quién interviene, y propuesta del objetivo del proceso.",
@@ -243,6 +254,7 @@
         <a class="guide-card" href="#/aprende"><span class="guide-num">?</span><div><div class="guide-q">Aprende</div><div class="guide-a">${C.TEMAS.length} temas <b>explicados fácil</b>: del qué es un AMFE a las acciones de mejora.</div></div><span class="guide-go">›</span></a>
         <a class="guide-card" href="#/prueba"><span class="guide-num">✓</span><div><div class="guide-q">Ponte a prueba</div><div class="guide-a">${C.TEST.length} preguntas del test con su <b>explicación</b>, y ejercicios prácticos.</div></div><span class="guide-go">›</span></a>
         <a class="guide-card" href="#/glosario"><span class="guide-num">A–Z</span><div><div class="guide-q">Glosario</div><div class="guide-a">${C.GLOSARIO.length} términos <b>en lenguaje llano</b>, con buscador.</div></div><span class="guide-go">›</span></a>
+        <!-- [eco] -->
         <a class="guide-card guide-card--hermana" href="${L.URL_AUD}" target="_blank" rel="noopener"><span class="guide-num">✓</span><div><div class="guide-q">Auditorías ↗</div><div class="guide-a">App hermana: <b>comprueba con una auditoría</b> si las medidas contra tus fallos prioritarios se aplican.</div></div><span class="guide-go">›</span></a>
         <a class="guide-card guide-card--hermana" href="${L.URL_IND}" target="_blank" rel="noopener"><span class="guide-num">%</span><div><div class="guide-q">Indicadores ↗</div><div class="guide-a">App hermana: <b>diseña los indicadores</b> con los que medirás tus acciones de mejora.</div></div><span class="guide-go">›</span></a>
         <a class="guide-card guide-card--hermana" href="${L.URL_TM}" target="_blank" rel="noopener"><span class="guide-num">n</span><div><div class="guide-q">Tamaño Muestral ↗</div><div class="guide-a">App hermana: <b>cuántos casos revisar</b> para medir esos indicadores.</div></div><span class="guide-go">›</span></a>
@@ -251,6 +263,7 @@
         <a class="guide-card guide-card--hermana" href="${L.URL_MAPA}" target="_blank" rel="noopener"><span class="guide-num">◆</span><div><div class="guide-q">Mapa de Riesgos ↗</div><div class="guide-a">App hermana: <b>elabora el mapa de riesgos</b> del proceso con este AMFE y su flujograma, con los riesgos coloreados por su IPR y el documento final.</div></div><span class="guide-go">›</span></a>
         <a class="guide-card guide-card--hermana" href="${L.URL_RONDAS}" target="_blank" rel="noopener"><span class="guide-num">✓</span><div><div class="guide-q">Rondas de Seguridad ↗</div><div class="guide-a">App hermana: <b>rondas de seguridad</b> en tu unidad; puede traer los fallos prioritarios de este AMFE como preguntas de la ronda.</div></div><span class="guide-go">›</span></a>
         <a class="guide-card guide-card--hermana" href="${L.URL_LC}" target="_blank" rel="noopener"><span class="guide-num">LC</span><div><div class="guide-q">Lectura Crítica ↗</div><div class="guide-a">App hermana: <b>lee críticamente un artículo</b> para comprobar la evidencia de una acción de mejora antes de adoptarla.</div></div><span class="guide-go">›</span></a>
+        <!-- [/eco] -->
       </div>
       ${revisionesHtml(d)}
       ${practica("<b>Protección de datos:</b> un AMFE analiza un proceso, no a pacientes concretos. No escribas nombres de pacientes ni números de historia clínica.")}`;
@@ -698,7 +711,7 @@
       <p class="page-lead">Dónde se concentran los riesgos del proceso.</p>
       <div data-zona="porsub">${porSubHtml(a)}</div>
       <div class="toolbar no-print sep-arriba"><button class="btn" data-act="informe">Ver tabla / PDF</button><button class="btn" data-act="excel">Exportar a Excel</button></div>
-      ${practica("Las apps <b>Mapa de Riesgos</b> y <b>Auditorías</b> podrán traer estos fallos, con su IPR y su prioridad, desde este mismo navegador. Si trabajáis en otro dispositivo, usad la copia de seguridad.")}`;
+      <!--[eco]-->${practica("Las apps <b>Mapa de Riesgos</b> y <b>Auditorías</b> podrán traer estos fallos, con su IPR y su prioridad, desde este mismo navegador. Si trabajáis en otro dispositivo, usad la copia de seguridad.")}<!--[/eco]-->`;
   }
 
   // ---------- Paso 7 · Acciones de mejora ----------
@@ -1669,10 +1682,15 @@
       });
     }
     else if (act === "ind-traer" && a) {
+      // [eco]
       let l = null; try { l = L.indicadoresDe(JSON.parse(leer("indicadores-datos") || "null")); } catch (er) { /* */ }
       indPara = id;
       if (l && l.length) { indImportados = l; const z = $(`[data-zind="${id}"]`); if (z) z.innerHTML = zonaInd(buscaAccion(a, id).x); }
       else confirmar("<p>No hay indicadores de la app <b>Indicadores</b> en este navegador.</p><p>Si los tienes en otro dispositivo, carga su copia de seguridad (.json).</p>", "Cargar una copia", () => $("#input-ind").click(), { titulo: "Traer de Indicadores", peligro: false });
+      // [/eco]
+      /* [ind]
+      indPara = id; $("#input-ind").click();
+      [/ind] */
     }
     // --- Paso 8 ---
     else if ((act === "sug-concl" || act === "sug-intro") && a) {
@@ -1790,12 +1808,18 @@
   let lcCargadas = null, lcPendiente = null;
   function traerLC(titulo, alElegir) {
     lcPendiente = { titulo, alElegir };
+    // [eco]
     let r = null; try { r = L.lecturasDe(JSON.parse(leer("lecturacritica-intercambio") || "null")); } catch (e) { /* */ }
     const lista = lcCargadas || (r && r.lecturas && r.lecturas.length ? r.lecturas : null);
     if (lista) { elegirLC(lista); return; }
     confirmar(r && r.error === "version" ? "<p>Las lecturas de este navegador son de una versión de <b>Lectura Crítica</b> que esta app aún no sabe leer.</p>"
       : "<p>No hay lecturas de la app <b>Lectura Crítica</b> en este navegador.</p><p>Si las tienes en otro dispositivo, carga su copia de seguridad (.json).</p>",
       "Cargar una copia", () => $("#input-lc").click(), { titulo, peligro: false });
+    // [/eco]
+    /* [ind]
+    if (lcCargadas) { elegirLC(lcCargadas); return; }
+    $("#input-lc").click();
+    [/ind] */
   }
   function elegirLC(lista) {
     const { titulo, alElegir } = lcPendiente, cortar = (s, n) => s.length > n ? s.slice(0, n - 1) + "…" : s;

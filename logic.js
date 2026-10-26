@@ -16,6 +16,7 @@
   // Versión del «motor» que usa la app Mapa de Riesgos (carga este logic.js como window.LogicaAmfe).
   // Subirla SOLO si se quita o cambia el significado de una función del contrato (tests/logic.test.mjs, «Contrato»).
   const MOTOR = 1;
+  // [eco]
   const URL_AUD = "https://cjgaland.github.io/auditorias/";
   const URL_IND = "https://cjgaland.github.io/indicadores-calidad/";
   const URL_TM = "https://cjgaland.github.io/tamano-muestral/";
@@ -24,6 +25,7 @@
   const URL_MAPA = "https://cjgaland.github.io/mapa-riesgos/";
   const URL_RONDAS = "https://cjgaland.github.io/rondas-seguridad/";
   const URL_LC = "https://cjgaland.github.io/lectura-critica/";
+  // [/eco]
 
   // ---------- Utilidades ----------
   const lleno = v => v != null && String(v).trim() !== "";
@@ -1061,7 +1063,10 @@
 
   const API = {
     FORMATO_LC, VERSION_LC, DECISION_LC, lecturasDe, referenciaLC, textoEvidenciaLC,
-    VERSION_DATOS, MOTOR, URL_AUD, URL_IND, URL_TM, URL_FLUJO, URL_DAFO, URL_MAPA, URL_RONDAS, URL_LC,
+    VERSION_DATOS, MOTOR,
+    // [eco]
+    URL_AUD, URL_IND, URL_TM, URL_FLUJO, URL_DAFO, URL_MAPA, URL_RONDAS, URL_LC,
+    // [/eco]
     lleno, sinTildes, num, entero1a10, corto, normal, plural,
     TRAMOS, ESCALAS_CURSO, ESCALA_NOM, ESCALA_PREG, tramo,
     ipr, iprDe, NIVELES_IPR, nivelIPR, ZONAS, zonaMatriz, ordenarFallos, puestos,
